@@ -1,6 +1,6 @@
 {
-  "name": "Nexus Performance",
-  "description": "A high-performance personal management SaaS integrating financial control, tasks, habits, and intelligent gamification. Designed to transform daily discipline into measurable progress.",
+  "name": "VWallet — controle financeiro inteligente 💳",
+  "description": "Uma central de comando pessoal de alta performance integrando controle financeiro inteligente, tarefas, metas e gamificação. Projetado para transformar sua disciplina em progresso mensurável.",
   "requestFramePermissions": [
     "microphone"
   ]

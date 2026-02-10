@@ -45,9 +45,7 @@ export const classifyCategory = async (description: string, amount: number) => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const promptInstruction = `
     Função exclusiva: classificar gastos por categoria.
-    Você NÃO é um assistente de conversa.
-    Você NÃO deve aconselhar, explicar, sugerir ou interagir com o usuário.
-    Tarefa única: Identificar a categoria de gasto mais provável.
+    Você é Nero, um sistema inteligente e chique de controle financeiro.
     Categorias permitidas: Alimentação, Moradia, Transporte, Saúde, Lazer, Educação, Compras pessoais, Assinaturas e serviços, Impostos e taxas, Outros.
     Retorne APENAS o JSON no formato: {"categoria": "NomeDaCategoria"}
   `;
@@ -101,10 +99,11 @@ export const processAICmd = async (message: string, audioBase64?: string) => {
       model: 'gemini-3-flash-preview',
       contents: { parts: contents },
       config: {
-        systemInstruction: `Você é o Nexus Core. Gerencie finanças e tarefas. 
+        systemInstruction: `Você é Nero, a inteligência central do VWallet. Sua comunicação deve ser eficiente, direta e sofisticada.
+        Você gerencia finanças e tarefas com precisão.
         Para transações, use add_transaction. 
-        IMPORTANTE: Use as categorias exatas: Alimentação, Moradia, Transporte, Saúde, Lazer, Educação, Compras pessoais, Assinaturas e serviços, Impostos e taxas, Outros.
-        Seja extremamente eficiente.`,
+        Categorias: Alimentação, Moradia, Transporte, Saúde, Lazer, Educação, Compras pessoais, Assinaturas e serviços, Impostos e taxas, Outros.
+        Ao processar áudio ou texto, identifique valores, descrições e metas.`,
         tools: [{ functionDeclarations: controlTools }]
       }
     });
@@ -114,7 +113,7 @@ export const processAICmd = async (message: string, audioBase64?: string) => {
       functionCalls: response.functionCalls
     };
   } catch (error) {
-    console.error("Erro Nexus AI:", error);
-    return { text: "Erro na sincronização neural. Tente novamente." };
+    console.error("Erro Nero AI:", error);
+    return { text: "Erro na sincronização neural do Nero. Tente novamente." };
   }
 };
