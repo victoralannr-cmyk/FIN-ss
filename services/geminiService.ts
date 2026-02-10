@@ -1,14 +1,11 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 
 export const getSmartInsights = async (userData: any) => {
   try {
-    const apiKey = process.env.API_KEY;
-    if (!apiKey) {
-      throw new Error("API_KEY não configurada no ambiente.");
-    }
-
-    const ai = new GoogleGenAI({ apiKey });
+    // Correctly initialize GoogleGenAI using a named parameter with process.env.API_KEY
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
+    // Call generateContent directly with model and content
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: `Analise o seguinte perfil de usuário de um app de performance pessoal e forneça 3 insights curtos e impactantes em português.
@@ -31,6 +28,7 @@ export const getSmartInsights = async (userData: any) => {
       }
     });
 
+    // Access the .text property directly (not a method)
     const text = response.text;
     return text ? JSON.parse(text.trim()) : [];
   } catch (error) {
