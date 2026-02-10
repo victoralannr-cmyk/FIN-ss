@@ -38,7 +38,9 @@ import {
   CircleDollarSign,
   ArrowDownCircle,
   ArrowUpCircle,
-  Pencil
+  Pencil,
+  Filter,
+  Save
 } from 'lucide-react';
 import { Card } from './components/ui/Card';
 import { AnimatedNumber } from './components/ui/AnimatedNumber';
@@ -99,7 +101,7 @@ const VWalletLogo = ({ className = "w-12 h-12" }: { className?: string }) => (
 );
 
 export const App: React.FC = () => {
-  // --- Estados Core ---
+  // --- TODA A DEFINIÇÃO DE HOOKS NO TOPO (Evita erro #310) ---
   const [isLoaded, setIsLoaded] = useState(false);
   const [isOnboarding, setIsOnboarding] = useState(true);
   const [userName, setUserName] = useState('');
@@ -114,7 +116,6 @@ export const App: React.FC = () => {
   const [monthlyLimit, setMonthlyLimit] = useState(5000); 
   const [initialReserve, setInitialReserve] = useState(38338); 
 
-  // --- Estados do Chat Nero ---
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [chatInput, setChatInput] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -139,11 +140,11 @@ export const App: React.FC = () => {
   const [newTransDesc, setNewTransDesc] = useState('');
   const [newTransAmount, setNewTransAmount] = useState('');
   const [newTransType, setNewTransType] = useState<'REVENUE' | 'EXPENSE'>('REVENUE');
+  const [newTransCategory, setNewTransCategory] = useState('Outros');
   const [isClassifying, setIsClassifying] = useState(false);
   const [suggestedCategory, setSuggestedCategory] = useState('Outros');
 
-  // --- Memoized Values ---
-  
+  // Memoized calculations
   const currentMonthTransactions = useMemo((): Transaction[] => {
     const month = viewDate.getMonth();
     const year = viewDate.getFullYear();
@@ -153,8 +154,6 @@ export const App: React.FC = () => {
     });
   }, [transactions, viewDate]);
 
-  // Fix: Explicitly handle types and simplify calculations to resolve 'unknown' inference issues.
-  // Using unique variable names and Number() conversion for state-derived values.
   const monthlyStats = useMemo(() => {
     let revenueSum: number = 0;
     let expensesSum: number = 0;
@@ -186,28 +185,30 @@ export const App: React.FC = () => {
   const mostDone = useMemo(() => {
     const completedTasks = tasks.filter(t => t.completed);
     if (completedTasks.length === 0) return { title: 'Nenhuma', count: 0 };
-    const counts = completedTasks.reduce((acc: Record<string, number>, t) => {
-      acc[t.title] = (acc[t.title] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const counts: Record<string, number> = {};
+    completedTasks.forEach(t => {
+      counts[t.title] = (counts[t.title] || 0) + 1;
+    });
     let maxTitle = '';
     let maxCount = 0;
-    for (const [title, count] of Object.entries(counts)) {
+    Object.keys(counts).forEach(title => {
+      const count = counts[title];
       if (count > maxCount) {
         maxCount = count;
         maxTitle = title;
       }
-    }
+    });
     return { title: maxTitle, count: maxCount };
   }, [tasks]);
 
   const completedCount = useMemo(() => tasks.filter(t => t.completed).length, [tasks]);
   const totalCount = useMemo(() => tasks.length, [tasks]);
   const completedGoalsCount = useMemo(() => goals.filter(g => g.completed).length, [goals]);
+  const activeGoalsCount = useMemo(() => goals.filter(g => !g.completed).length, [goals]);
 
-  // --- Effects ---
+  // Effects
   useEffect(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitRecognition;
     if (SpeechRecognition) {
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.continuous = true;
@@ -234,11 +235,9 @@ export const App: React.FC = () => {
     const savedTasks = localStorage.getItem('nexus_user_tasks');
     const savedTransactions = localStorage.getItem('nexus_user_transactions');
     const savedGoals = localStorage.getItem('nexus_user_goals');
-    const savedMicPerm = localStorage.getItem('nexus_mic_permission');
     const savedLimit = localStorage.getItem('nexus_monthly_limit');
     const savedReserve = localStorage.getItem('nexus_initial_reserve');
     
-    if (savedMicPerm === 'true') setMicPermissionGranted(true);
     if (savedLimit) setMonthlyLimit(Number(savedLimit));
     if (savedReserve) setInitialReserve(Number(savedReserve));
 
@@ -265,7 +264,7 @@ export const App: React.FC = () => {
     }
   }, [stats, tasks, transactions, goals, monthlyLimit, initialReserve, isOnboarding, isLoaded, userName]);
 
-  // --- Handlers ---
+  // Handlers
   const handleAiChat = async (text: string, audioBase64?: string) => {
     if (!text && !audioBase64) return;
     setIsAiLoading(true);
@@ -319,6 +318,15 @@ export const App: React.FC = () => {
     }));
   };
 
+  const handleManualBalanceUpdate = () => {
+    const newVal = parseFloat(tempBalance.replace(',', '.'));
+    if (!isNaN(newVal)) {
+      setStats(prev => ({ ...prev, balance: newVal }));
+      triggerFireworks('#ffae00');
+      setIsEditingBalance(false);
+    }
+  };
+
   const toggleTask = (id: string) => {
     setTasks(prev => prev.map(t => {
       if (t.id === id && !t.completed) {
@@ -328,6 +336,37 @@ export const App: React.FC = () => {
       }
       return t;
     }));
+  };
+
+  const handleUpdateGoal = (id: string, amount: number) => {
+    setGoals(prev => prev.map(g => {
+      if (g.id === id) {
+        const newCurrent = g.current + amount;
+        const isCompleted = newCurrent >= g.target;
+        if (isCompleted && !g.completed) {
+          setStats(s => ({ ...s, xp: s.xp + 100 }));
+          triggerFireworks('#d4af37');
+        }
+        return { ...g, current: newCurrent, completed: isCompleted };
+      }
+      return g;
+    }));
+  };
+
+  const handleAddManualTransaction = () => {
+    if (!newTransDesc || !newTransAmount) return;
+    const amount = parseFloat(newTransAmount.replace(',', '.'));
+    if (isNaN(amount)) return;
+
+    handleAdjustBalance(
+      newTransType === 'REVENUE' ? amount : -amount,
+      newTransDesc,
+      newTransCategory
+    );
+
+    setNewTransDesc('');
+    setNewTransAmount('');
+    triggerFireworks(newTransType === 'REVENUE' ? '#10b981' : '#f43f5e');
   };
 
   const triggerFireworks = (color = '#ffae00') => {
@@ -350,7 +389,6 @@ export const App: React.FC = () => {
   };
 
   const startRecording = async () => {
-    if (!micPermissionGranted) { setShowMicPrompt(true); return; }
     try {
       transcriptRef.current = ''; setChatInput('');
       if (recognitionRef.current) recognitionRef.current.start();
@@ -381,7 +419,20 @@ export const App: React.FC = () => {
     }
   };
 
-  // --- Early Returns ---
+  const handleDeleteTransaction = (id: string) => {
+    const t = transactions.find(t => t.id === id);
+    if (!t) return;
+    const amountAdjustment = t.type === 'REVENUE' ? -t.amount : t.amount;
+    setTransactions(prev => prev.filter(item => item.id !== id));
+    setStats(prev => ({
+      ...prev,
+      balance: prev.balance + amountAdjustment,
+      totalRevenue: t.type === 'REVENUE' ? prev.totalRevenue - t.amount : prev.totalRevenue,
+      totalExpenses: t.type === 'EXPENSE' ? prev.totalExpenses - t.amount : prev.totalExpenses,
+    }));
+  };
+
+  // --- EARLY RETURNS ---
   if (!isLoaded) return null;
 
   if (isOnboarding) {
@@ -424,8 +475,8 @@ export const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col lg:flex-row font-sans overflow-hidden selection:bg-[#d4af37] selection:text-black">
-      {/* Sidebar - Modern Dark */}
-      <aside className="hidden lg:flex flex-col w-72 border-r border-neutral-900 p-10 bg-black/80 backdrop-blur-2xl">
+      {/* Sidebar - Desktop */}
+      <aside className="hidden lg:flex flex-col w-72 border-r border-neutral-900 p-10 bg-black/80 backdrop-blur-2xl shrink-0">
         <div className="flex flex-col items-center gap-6 mb-16">
           <VWalletLogo className="w-16 h-16" />
           <span className="text-2xl text-chique tracking-tighter uppercase font-black text-white">VWallet</span>
@@ -475,8 +526,24 @@ export const App: React.FC = () => {
                 <Wallet className="absolute -right-12 -top-12 opacity-5 group-hover:opacity-10 transition-opacity rotate-12" size={160} />
                 <h4 className="text-[11px] text-neutral-600 uppercase tracking-[0.5em] mb-6 font-black">Capital Disponível</h4>
                 <div className="flex items-center gap-5">
-                  <div className="text-6xl text-modern-bold tracking-tighter font-black">R$ <AnimatedNumber value={stats.balance} /></div>
-                  <button onClick={() => { setTempBalance(stats.balance.toString()); setIsEditingBalance(true); }} className="p-4 text-neutral-700 hover:text-[#d4af37] transition-colors bg-neutral-900/50 rounded-full border border-neutral-800"><Edit2 size={18} /></button>
+                  {isEditingBalance ? (
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="text" 
+                        value={tempBalance}
+                        onChange={e => setTempBalance(e.target.value)}
+                        className="bg-black border-b-2 border-[#d4af37] text-4xl font-black w-48 outline-none"
+                        autoFocus
+                      />
+                      <button onClick={handleManualBalanceUpdate} className="p-3 bg-[#d4af37] text-black rounded-full"><Save size={18}/></button>
+                      <button onClick={() => setIsEditingBalance(false)} className="p-3 bg-neutral-800 text-white rounded-full"><X size={18}/></button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-6xl text-modern-bold tracking-tighter font-black">R$ <AnimatedNumber value={stats.balance} /></div>
+                      <button onClick={() => { setTempBalance(stats.balance.toString()); setIsEditingBalance(true); }} className="p-4 text-neutral-700 hover:text-[#d4af37] transition-colors bg-neutral-900/50 rounded-full border border-neutral-800"><Edit2 size={18} /></button>
+                    </>
+                  )}
                 </div>
               </Card>
 
@@ -515,9 +582,9 @@ export const App: React.FC = () => {
                   <h3 className="text-[11px] font-black uppercase tracking-[0.4em] text-neutral-600">Core Metrics</h3>
                 </div>
                 <RadarScoreChart data={[
-                  { label: 'Foco', value: (totalCount as number) > 0 ? (completedCount / totalCount) * 100 : 0, color: '#d4af37' },
-                  { label: 'Fluxo', value: Math.min(100, ((stats.balance as number) / 10000) * 100), color: '#d4af37' },
-                  { label: 'Ação', value: Math.min(100, ((stats.xp as number) / 5000) * 100), color: '#d4af37' },
+                  { label: 'Foco', value: totalCount > 0 ? (completedCount / totalCount) * 100 : 0, color: '#d4af37' },
+                  { label: 'Fluxo', value: Math.min(100, (stats.balance / 10000) * 100), color: '#d4af37' },
+                  { label: 'Ação', value: Math.min(100, (stats.xp / 5000) * 100), color: '#d4af37' },
                   { label: 'Metas', value: goals.length > 0 ? (completedGoalsCount / goals.length) * 100 : 0, color: '#d4af37' },
                   { label: 'Nero', value: 85, color: '#d4af37' }
                 ]} size={320} />
@@ -527,7 +594,7 @@ export const App: React.FC = () => {
         )}
 
         {activeTab === 'finances' && (
-          <div className="space-y-12 animate-in fade-in duration-1000">
+          <div className="space-y-12 animate-in fade-in duration-1000 pb-20">
             <header className="flex flex-col items-center gap-10">
               <VWalletLogo className="w-20 h-20" />
               <div className="flex items-center gap-10">
@@ -545,26 +612,32 @@ export const App: React.FC = () => {
               </div>
             </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="bg-neutral-950 border border-emerald-900/20 rounded-[2.5rem] p-12 shadow-2xl relative group">
-                <TrendingUp className="absolute top-10 right-10 text-emerald-800 opacity-20" size={60} />
-                <p className="text-[11px] text-emerald-500/60 font-black uppercase tracking-[0.5em] mb-4">CRÉDITOS</p>
-                <h3 className="text-5xl text-modern-bold font-black text-emerald-500">R$ {monthlyStats.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <div className="bg-neutral-950 border border-emerald-900/20 rounded-[2.5rem] p-10 shadow-2xl relative group">
+                <TrendingUp className="absolute top-8 right-8 text-emerald-800 opacity-20" size={40} />
+                <p className="text-[11px] text-emerald-500/60 font-black uppercase tracking-[0.4em] mb-4">CRÉDITOS MENSAL</p>
+                <h3 className="text-4xl text-modern-bold font-black text-emerald-500">R$ {monthlyStats.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
               </div>
-              <div className="bg-neutral-950 border border-rose-900/20 rounded-[2.5rem] p-12 shadow-2xl relative group">
-                <TrendingDown className="absolute top-10 right-10 text-rose-800 opacity-20" size={60} />
-                <p className="text-[11px] text-rose-500/60 font-black uppercase tracking-[0.5em] mb-4">DÉBITOS</p>
-                <h3 className="text-5xl text-modern-bold font-black text-rose-500">R$ {monthlyStats.expenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
+              <div className="bg-neutral-950 border border-rose-900/20 rounded-[2.5rem] p-10 shadow-2xl relative group">
+                <TrendingDown className="absolute top-8 right-8 text-rose-800 opacity-20" size={40} />
+                <p className="text-[11px] text-rose-500/60 font-black uppercase tracking-[0.4em] mb-4">DÉBITOS MENSAL</p>
+                <h3 className="text-4xl text-modern-bold font-black text-rose-500">R$ {monthlyStats.expenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
+              </div>
+              <div className="bg-neutral-950 border border-neutral-800 rounded-[2.5rem] p-10 shadow-2xl relative group md:col-span-2 lg:col-span-1">
+                <PieChart className="absolute top-8 right-8 text-neutral-700 opacity-20" size={40} />
+                <p className="text-[11px] text-neutral-500 font-black uppercase tracking-[0.4em] mb-4">CAPITAL LÍQUIDO</p>
+                <h3 className="text-4xl text-modern-bold font-black text-white">R$ {monthlyStats.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
               </div>
             </div>
 
+            {/* Balanço Patrimonial Integrado e Editável */}
             <Card className="bg-neutral-950 border border-neutral-900 rounded-[3rem] p-12 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-12">
               <div className="flex items-center gap-8">
                  <div className="w-16 h-16 bg-[#d4af37]/10 rounded-full flex items-center justify-center border border-[#d4af37]/10 shadow-xl">
                     <Wallet className="text-[#d4af37]" size={28} />
                  </div>
                  <div>
-                    <p className="text-[11px] text-neutral-600 font-black uppercase tracking-[0.4em] mb-2">BALANÇO PATRIMONIAL</p>
+                    <p className="text-[11px] text-neutral-600 font-black uppercase tracking-[0.4em] mb-2">BALANÇO PATRIMONIAL TOTAL</p>
                     <h3 className="text-5xl text-modern-bold font-black text-white">R$ {(initialReserve + monthlyStats.balance).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
                  </div>
               </div>
@@ -574,14 +647,138 @@ export const App: React.FC = () => {
                   <p className="text-xl font-black text-neutral-500">R$ {initialReserve.toLocaleString('pt-BR')}</p>
                 </div>
                 <button onClick={() => {
-                  const val = prompt("Definir Reserva:", initialReserve.toString());
-                  if (val) setInitialReserve(Number(val));
-                }} className="p-4 bg-neutral-900 rounded-xl hover:bg-[#d4af37] hover:text-black transition-all border border-neutral-800"><Pencil size={20}/></button>
+                  const val = prompt("Definir Reserva Inicial (Baseline):", initialReserve.toString());
+                  if (val && !isNaN(Number(val))) {
+                    setInitialReserve(Number(val));
+                    triggerFireworks();
+                  }
+                }} className="p-4 bg-neutral-900 rounded-xl hover:bg-[#d4af37] hover:text-black transition-all border border-neutral-800"><Edit2 size={20}/></button>
               </div>
             </Card>
 
-            <button onClick={() => setActiveTab('finances_new')} className="btn-modern w-full py-8 bg-gradient-to-r from-[#b8860b] to-[#d4af37] text-black rounded-full font-black uppercase tracking-[0.5em] text-[12px] shadow-3xl flex items-center justify-center gap-6">
-               <Plus size={28} strokeWidth={4} /> Novo Lançamento
+            {/* FORMULÁRIO DE LANÇAMENTO MANUAL RESTORADO */}
+            <Card className="bg-neutral-950 border-neutral-900 rounded-[3rem] p-12 shadow-2xl space-y-8">
+              <h3 className="text-[11px] font-black uppercase tracking-[0.5em] text-[#d4af37]">Novo Lançamento Manual</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black uppercase tracking-widest text-neutral-600">Descrição</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ex: Pizza, Janta, Aluguel" 
+                    value={newTransDesc}
+                    onChange={e => setNewTransDesc(e.target.value)}
+                    className="w-full bg-black border border-neutral-800 p-4 rounded-xl font-bold outline-none focus:border-[#d4af37]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black uppercase tracking-widest text-neutral-600">Valor (R$)</label>
+                  <input 
+                    type="text" 
+                    placeholder="0,00" 
+                    value={newTransAmount}
+                    onChange={e => setNewTransAmount(e.target.value)}
+                    className="w-full bg-black border border-neutral-800 p-4 rounded-xl font-bold outline-none focus:border-[#d4af37]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black uppercase tracking-widest text-neutral-600">Categoria</label>
+                  <select 
+                    value={newTransCategory}
+                    onChange={e => setNewTransCategory(e.target.value)}
+                    className="w-full bg-black border border-neutral-800 p-4 rounded-xl font-bold outline-none focus:border-[#d4af37] appearance-none"
+                  >
+                    {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black uppercase tracking-widest text-neutral-600">Tipo</label>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => setNewTransType('REVENUE')}
+                      className={`flex-1 p-4 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${newTransType === 'REVENUE' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-neutral-900 text-neutral-600'}`}
+                    >
+                      Receita
+                    </button>
+                    <button 
+                      onClick={() => setNewTransType('EXPENSE')}
+                      className={`flex-1 p-4 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${newTransType === 'EXPENSE' ? 'bg-rose-600 text-white shadow-lg' : 'bg-neutral-900 text-neutral-600'}`}
+                    >
+                      Despesa
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <button 
+                onClick={handleAddManualTransaction}
+                className="btn-modern w-full py-6 bg-gradient-to-r from-[#b8860b] to-[#d4af37] text-black rounded-2xl font-black uppercase tracking-[0.5em] text-[11px] shadow-3xl"
+              >
+                Confirmar Lançamento
+              </button>
+            </Card>
+
+            {/* Orçamento Mensal Progress Bar */}
+            <Card className="bg-neutral-950 border-neutral-900 rounded-[3rem] p-12 shadow-2xl space-y-8">
+               <div className="flex justify-between items-end">
+                 <div>
+                   <h4 className="text-[11px] font-black uppercase tracking-[0.4em] text-neutral-500 mb-2">LIMITE DE ORÇAMENTO</h4>
+                   <p className="text-2xl font-black text-white">R$ {monthlyStats.expenses.toLocaleString('pt-BR')} de R$ {monthlyLimit.toLocaleString('pt-BR')}</p>
+                 </div>
+                 <span className={`text-sm font-black uppercase tracking-widest ${monthlyStats.budgetPercentage > 90 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                    {monthlyStats.budgetPercentage}% CONSUMIDO
+                 </span>
+               </div>
+               <div className="h-4 bg-neutral-900 rounded-full overflow-hidden border border-neutral-800 shadow-inner">
+                 <div 
+                  className={`h-full transition-all duration-1000 ${monthlyStats.budgetPercentage > 90 ? 'bg-rose-600' : 'bg-[#d4af37]'}`} 
+                  style={{ width: `${monthlyStats.budgetPercentage}%` }} 
+                 />
+               </div>
+            </Card>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+              {/* Gráfico de Categorias Restorado */}
+              <div className="bg-neutral-950 border border-neutral-900 rounded-[3rem] p-12 shadow-3xl">
+                <CategoryExpensesChart transactions={currentMonthTransactions} />
+              </div>
+
+              {/* Histórico de Transações Restorado */}
+              <div className="bg-neutral-950 border border-neutral-900 rounded-[3rem] p-12 shadow-3xl flex flex-col h-[500px]">
+                <div className="flex justify-between items-center mb-8 pb-4 border-b border-neutral-900">
+                  <h3 className="text-[11px] font-black uppercase tracking-[0.4em] text-white">HISTÓRICO RECENTE</h3>
+                  <button className="text-[10px] font-black text-[#d4af37] uppercase tracking-widest hover:underline">Ver tudo</button>
+                </div>
+                <div className="flex-1 overflow-y-auto space-y-4 no-scrollbar pr-2">
+                   {currentMonthTransactions.length === 0 ? (
+                      <p className="text-center text-neutral-800 uppercase tracking-widest py-20 text-[10px] font-black">Nenhuma movimentação este mês.</p>
+                   ) : (
+                     currentMonthTransactions.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(t => (
+                        <div key={t.id} className="flex items-center justify-between p-5 bg-black/40 border border-neutral-900 rounded-2xl group hover:border-neutral-700 transition-all">
+                          <div className="flex items-center gap-4">
+                            <div className={`p-3 rounded-xl ${t.type === 'REVENUE' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                              {t.type === 'REVENUE' ? <ArrowUpCircle size={20} /> : <ArrowDownCircle size={20} />}
+                            </div>
+                            <div>
+                              <p className="text-sm font-black text-white uppercase tracking-tight line-clamp-1">{t.description}</p>
+                              <p className="text-[10px] font-black text-neutral-600 uppercase tracking-widest">{t.category} • {new Date(t.date).toLocaleDateString('pt-BR')}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-5">
+                            <p className={`text-sm font-black ${t.type === 'REVENUE' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                              {t.type === 'REVENUE' ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR')}
+                            </p>
+                            <button onClick={() => handleDeleteTransaction(t.id)} className="opacity-0 group-hover:opacity-100 p-2 text-neutral-700 hover:text-rose-500 transition-all">
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </div>
+                     ))
+                   )}
+                </div>
+              </div>
+            </div>
+
+            <button onClick={() => setIsAiOpen(true)} className="btn-modern w-full py-8 bg-gradient-to-r from-[#b8860b] to-[#d4af37] text-black rounded-full font-black uppercase tracking-[0.5em] text-[12px] shadow-3xl flex items-center justify-center gap-6">
+               <Bot size={28} /> Sincronizar Novo Lançamento com Nero
             </button>
           </div>
         )}
@@ -641,9 +838,48 @@ export const App: React.FC = () => {
             </Card>
           </div>
         )}
+
+        {activeTab === 'goals' && (
+           <div className="space-y-12 animate-in fade-in duration-1000">
+             <header className="space-y-10">
+              <h2 className="text-5xl text-modern-bold tracking-tight font-black uppercase">Metas e Conquistas</h2>
+             </header>
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div className="bg-neutral-950 border border-neutral-900 rounded-[3rem] p-10 shadow-xl">
+                  <GoalProgressCard activeCount={activeGoalsCount} completedCount={completedGoalsCount} />
+                </div>
+                {goals.map(goal => (
+                  <Card key={goal.id} className="relative overflow-hidden p-10 bg-neutral-950 border-neutral-900 rounded-[3rem] shadow-xl group">
+                    <div className="flex justify-between items-start mb-6">
+                      <div className="p-3 bg-neutral-900 rounded-2xl border border-neutral-800 text-[#d4af37]"><Flag size={20}/></div>
+                      <button className="p-2 text-neutral-800 hover:text-rose-500 transition-all opacity-0 group-hover:opacity-100"><Trash2 size={16}/></button>
+                    </div>
+                    <h4 className="text-xl font-black text-white uppercase tracking-tight mb-2">{goal.title}</h4>
+                    <p className="text-[10px] text-neutral-600 font-black uppercase tracking-[0.2em] mb-8">PROGRESSO: {goal.current} / {goal.target} {goal.unit}</p>
+                    <div className="h-3 bg-neutral-900 rounded-full overflow-hidden mb-8 border border-neutral-800">
+                      <div className="h-full bg-[#d4af37] transition-all duration-700" style={{ width: `${(goal.current / goal.target) * 100}%` }} />
+                    </div>
+                    <div className="flex gap-4">
+                      <button onClick={() => handleUpdateGoal(goal.id, 1)} className="flex-1 py-4 bg-neutral-900 border border-neutral-800 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-[#d4af37] hover:text-black transition-all">+ Incrementar</button>
+                    </div>
+                  </Card>
+                ))}
+                <button onClick={() => {
+                  const title = prompt("Título da Meta:");
+                  const target = prompt("Valor Alvo:");
+                  if (title && target) {
+                    setGoals(prev => [...prev, { id: Date.now().toString(), title, target: Number(target), current: 0, unit: 'un', completed: false }]);
+                  }
+                }} className="border-2 border-dashed border-neutral-900 rounded-[3rem] p-10 flex flex-col items-center justify-center gap-4 text-neutral-800 hover:text-[#d4af37] hover:border-[#d4af37] transition-all group">
+                   <Plus size={40} className="group-hover:scale-110 transition-transform"/>
+                   <span className="text-[11px] font-black uppercase tracking-[0.4em]">Nova Meta Estratégica</span>
+                </button>
+             </div>
+           </div>
+        )}
       </main>
 
-      {/* CHAT NERO - Modern Sans UI */}
+      {/* CHAT NERO - UI Moderna */}
       {isAiOpen && (
         <div className="fixed inset-0 lg:inset-auto lg:bottom-12 lg:right-12 lg:w-[480px] lg:h-[840px] bg-black border border-neutral-900 lg:rounded-[3.5rem] flex flex-col z-[500] shadow-[0_40px_150px_rgba(0,0,0,1)] animate-in slide-in-from-bottom-12 duration-1000 overflow-hidden">
           <div className="p-10 border-b border-neutral-900 flex justify-between items-center bg-black/95 backdrop-blur-3xl">
@@ -662,7 +898,7 @@ export const App: React.FC = () => {
                 <ShieldCheck className="mx-auto text-[#d4af37] opacity-10" size={100} />
                 <div className="space-y-5">
                    <p className="text-[11px] text-neutral-700 uppercase tracking-[0.7em] font-black">Terminal Nero Operacional</p>
-                   <p className="text-sm text-neutral-500 font-black px-12 leading-relaxed opacity-70">"Nero, registre aporte de R$ 5.000 para investimentos"
+                   <p className="text-sm text-neutral-500 font-black px-12 leading-relaxed opacity-70 italic">"Nero, registre aporte de R$ 5.000 para investimentos"
 "Priorize nova tarefa: Planejamento Q3"</p>
                 </div>
               </div>
@@ -685,16 +921,30 @@ export const App: React.FC = () => {
         </div>
       )}
 
-      {/* MOBILE NAV (Modern Sans) */}
-      {!isAiOpen && (
-        <nav className="lg:hidden fixed bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-5 bg-neutral-950/95 backdrop-blur-3xl border border-neutral-900 p-5 rounded-full z-[400] shadow-[0_40px_100px_rgba(0,0,0,1)]">
-          {[ { id: 'dashboard', icon: LayoutDashboard }, { id: 'finances', icon: Wallet }, { id: 'tasks', icon: CheckSquare }, { id: 'goals', icon: Flag } ].map(item => (
-            <button key={item.id} onClick={() => setActiveTab(item.id)} className={`p-5 rounded-full transition-all active:scale-90 ${activeTab === item.id ? 'bg-[#d4af37] text-black shadow-2xl' : 'text-neutral-700'}`}><item.icon size={28} /></button>
-          ))}
-          <div className="w-[1px] h-14 bg-neutral-900 mx-3" />
-          <button onClick={() => setIsAiOpen(true)} className="p-5 rounded-full bg-[#d4af37]/10 text-[#d4af37] border border-[#d4af37]/10 active:scale-90 shadow-xl"><Bot size={28} /></button>
-        </nav>
-      )}
+      {/* NAVEGAÇÃO MOBILE FIXA NO BOTTOM - Garantida com fixed bottom-0 left-0 right-0 */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 flex items-center justify-center gap-5 bg-black/90 backdrop-blur-3xl border-t border-neutral-900 p-4 pb-8 z-[400] shadow-[0_-20px_60px_rgba(0,0,0,0.8)]">
+        {[ 
+          { id: 'dashboard', icon: LayoutDashboard }, 
+          { id: 'finances', icon: Wallet }, 
+          { id: 'tasks', icon: CheckSquare }, 
+          { id: 'goals', icon: Flag } 
+        ].map(item => (
+          <button 
+            key={item.id} 
+            onClick={() => setActiveTab(item.id)} 
+            className={`p-5 rounded-full transition-all active:scale-90 ${activeTab === item.id ? 'bg-[#d4af37] text-black shadow-2xl' : 'text-neutral-700'}`}
+          >
+            <item.icon size={26} />
+          </button>
+        ))}
+        <div className="w-[1px] h-10 bg-neutral-800 mx-2" />
+        <button 
+          onClick={() => setIsAiOpen(true)} 
+          className="p-5 rounded-full bg-[#d4af37]/10 text-[#d4af37] border border-[#d4af37]/10 active:scale-90 shadow-xl"
+        >
+          <Bot size={26} />
+        </button>
+      </nav>
     </div>
   );
 };
