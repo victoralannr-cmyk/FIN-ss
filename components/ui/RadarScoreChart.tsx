@@ -56,7 +56,7 @@ export const RadarScoreChart: React.FC<RadarScoreChartProps> = ({ data, size = 3
 
   return (
     <div className="relative flex items-center justify-center select-none group animate-in fade-in zoom-in-95 duration-1000">
-      <svg width={size} height={size} className="overflow-visible drop-shadow-[0_0_30px_rgba(16,185,129,0.1)]">
+      <svg width={size} height={size} className="overflow-visible drop-shadow-[0_0_30px_rgba(255,0,0,0.1)]">
         {/* Background Grid */}
         {gridPaths.map((path, i) => (
           <polygon
@@ -87,8 +87,8 @@ export const RadarScoreChart: React.FC<RadarScoreChartProps> = ({ data, size = 3
         {/* Data Polygon Fill */}
         <polygon
           points={dataPoints}
-          fill="rgba(16, 185, 129, 0.15)"
-          stroke="rgba(16, 185, 129, 0.6)"
+          fill="rgba(255, 0, 0, 0.15)"
+          stroke="#ff0000"
           strokeWidth="2.5"
           className="transition-all duration-700 ease-out"
         />
@@ -101,7 +101,7 @@ export const RadarScoreChart: React.FC<RadarScoreChartProps> = ({ data, size = 3
               key={i}
               x={x}
               y={y}
-              fill={d.color}
+              fill="#ff0000"
               fontSize={size * 0.03} // Dynamic font size
               fontWeight="900"
               textAnchor="middle"

@@ -3,31 +3,44 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Activity, 
   Sparkles, 
-  Send,
-  Plus,
-  ArrowUpRight,
-  ArrowDownLeft,
-  LayoutDashboard,
-  Wallet,
-  CheckSquare,
-  Trophy,
-  Target,
-  Bot,
-  Edit2,
-  Check,
-  Trash2,
-  Mic,
-  MicOff,
-  History,
-  PieChart,
-  MessageSquare,
-  TrendingUp,
-  TrendingDown,
-  X,
-  ShieldCheck
+  Send, 
+  Plus, 
+  ArrowUpRight, 
+  ArrowDownLeft, 
+  LayoutDashboard, 
+  Wallet, 
+  CheckSquare, 
+  Trophy, 
+  Target as TargetIcon, 
+  Bot, 
+  Edit2, 
+  Check, 
+  Trash2, 
+  Mic, 
+  MicOff, 
+  History, 
+  PieChart, 
+  MessageSquare, 
+  TrendingUp, 
+  TrendingDown, 
+  X, 
+  ShieldCheck, 
+  ChevronRight, 
+  ClipboardList, 
+  Flame, 
+  Zap, 
+  Flag, 
+  BarChart3, 
+  Loader2,
+  Calendar
 } from 'lucide-react';
 import { Card } from './components/ui/Card';
 import { AnimatedNumber } from './components/ui/AnimatedNumber';
+import { RadarScoreChart } from './components/ui/RadarScoreChart';
+import { WeeklyTaskChart } from './components/ui/WeeklyTaskChart';
+import { GoalProgressCard } from './components/ui/GoalProgressCard';
+import { WeeklyExpensesChart } from './components/ui/WeeklyExpensesChart';
+import { CategoryExpensesChart } from './components/ui/CategoryExpensesChart';
 import { 
   Priority, 
   Rank, 
@@ -39,7 +52,7 @@ import {
   XP_REQUIREMENTS,
   CATEGORIES
 } from './constants';
-import { processAICmd } from './services/geminiService';
+import { processAICmd, classifyCategory } from './services/geminiService';
 import confetti from 'canvas-confetti';
 
 interface ChatMessage {
@@ -47,7 +60,17 @@ interface ChatMessage {
   text: string;
 }
 
-const App: React.FC = () => {
+interface Goal {
+  id: string;
+  title: string;
+  current: number;
+  target: number;
+  unit: string;
+  completed: boolean;
+}
+
+// Fix: Exported App component as a named constant to match the import in index.tsx
+export const App: React.FC = () => {
   // --- Estados Core ---
   const [isLoaded, setIsLoaded] = useState(false);
   const [isOnboarding, setIsOnboarding] = useState(true);
@@ -56,6 +79,7 @@ const App: React.FC = () => {
   const [stats, setStats] = useState<UserStats>({ xp: 0, rank: Rank.INICIANTE, level: 1, totalRevenue: 0, totalExpenses: 0, balance: 0 });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
   
   // --- Estados do Nexus AI Chat ---
   const [isAiOpen, setIsAiOpen] = useState(false);
@@ -65,14 +89,51 @@ const App: React.FC = () => {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [micPermissionGranted, setMicPermissionGranted] = useState(false);
   const [showMicPrompt, setShowMicPrompt] = useState(false);
+  
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
+  const recognitionRef = useRef<any>(null);
+  const transcriptRef = useRef<string>('');
+
+  // --- Estados de Edição de Saldo ---
+  const [isEditingBalance, setIsEditingBalance] = useState(false);
+  const [tempBalance, setTempBalance] = useState('');
+
+  // --- Estados de Nova Meta ---
+  const [newGoalTitle, setNewGoalTitle] = useState('');
+  const [newGoalTarget, setNewGoalTarget] = useState('');
+  const [newGoalUnit, setNewGoalUnit] = useState('');
 
   // --- Outros Estados UI ---
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTransDesc, setNewTransDesc] = useState('');
   const [newTransAmount, setNewTransAmount] = useState('');
   const [newTransType, setNewTransType] = useState<'REVENUE' | 'EXPENSE'>('REVENUE');
+  const [isClassifying, setIsClassifying] = useState(false);
+  const [suggestedCategory, setSuggestedCategory] = useState('Outros');
+
+  // --- Inicialização da Transcrição de Áudio (Browser API) ---
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = true;
+      recognitionRef.current.lang = 'pt-BR';
+
+      recognitionRef.current.onresult = (event: any) => {
+        let interimTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            transcriptRef.current += event.results[i][0].transcript;
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+        setChatInput(transcriptRef.current + interimTranscript);
+      };
+    }
+  }, []);
 
   // --- Efeitos de Persistência ---
   useEffect(() => {
@@ -80,6 +141,7 @@ const App: React.FC = () => {
     const savedStats = localStorage.getItem('nexus_user_stats');
     const savedTasks = localStorage.getItem('nexus_user_tasks');
     const savedTransactions = localStorage.getItem('nexus_user_transactions');
+    const savedGoals = localStorage.getItem('nexus_user_goals');
     const savedMicPerm = localStorage.getItem('nexus_mic_permission');
     
     if (savedMicPerm === 'true') setMicPermissionGranted(true);
@@ -90,6 +152,7 @@ const App: React.FC = () => {
       if (savedStats) setStats(JSON.parse(savedStats));
       if (savedTasks) setTasks(JSON.parse(savedTasks));
       if (savedTransactions) setTransactions(JSON.parse(savedTransactions));
+      if (savedGoals) setGoals(JSON.parse(savedGoals));
     }
     setIsLoaded(true);
   }, []);
@@ -100,8 +163,9 @@ const App: React.FC = () => {
       localStorage.setItem('nexus_user_stats', JSON.stringify(stats));
       localStorage.setItem('nexus_user_tasks', JSON.stringify(tasks));
       localStorage.setItem('nexus_user_transactions', JSON.stringify(transactions));
+      localStorage.setItem('nexus_user_goals', JSON.stringify(goals));
     }
-  }, [stats, tasks, transactions]);
+  }, [stats, tasks, transactions, goals]);
 
   // --- Lógica de Ações do Nexus AI ---
   const executeAiFunctions = (calls: any[]) => {
@@ -109,10 +173,10 @@ const App: React.FC = () => {
       const { name, args } = call;
       if (name === 'add_transaction') {
         const val = args.type === 'REVENUE' ? args.amount : -args.amount;
-        handleAdjustBalance(val, args.description, args.category || 'Geral');
+        handleAdjustBalance(val, args.description, args.category || 'Outros');
       } else if (name === 'update_balance') {
         setStats(prev => ({ ...prev, balance: args.amount }));
-        triggerFireworks('#10b981');
+        triggerFireworks('#ffae00');
       } else if (name === 'add_task') {
         const newTask: Task = {
           id: Math.random().toString(36).substr(2, 9),
@@ -131,11 +195,8 @@ const App: React.FC = () => {
     if (!text && !audioBase64) return;
     setIsAiLoading(true);
     
-    if (text && text !== "Comando de voz recebido") {
-      setMessages(prev => [...prev, { role: 'user', text }]);
-    } else if (audioBase64) {
-      setMessages(prev => [...prev, { role: 'user', text: "🎤 Comando de áudio enviado" }]);
-    }
+    const displayMessage = text || "🎤 Enviando comando de áudio...";
+    setMessages(prev => [...prev, { role: 'user', text: displayMessage }]);
     
     const result = await processAICmd(text, audioBase64);
     
@@ -143,7 +204,7 @@ const App: React.FC = () => {
       executeAiFunctions(result.functionCalls);
     }
 
-    setMessages(prev => [...prev, { role: 'ai', text: result.text || "Comando processado com sucesso pelo Nexus Core." }]);
+    setMessages(prev => [...prev, { role: 'ai', text: result.text || "Comando processado com sucesso pelo Nexus." }]);
     setIsAiLoading(false);
     setChatInput('');
   };
@@ -171,6 +232,10 @@ const App: React.FC = () => {
     }
 
     try {
+      transcriptRef.current = '';
+      setChatInput('');
+      if (recognitionRef.current) recognitionRef.current.start();
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorder.current = new MediaRecorder(stream);
       audioChunks.current = [];
@@ -181,7 +246,8 @@ const App: React.FC = () => {
         reader.readAsDataURL(audioBlob);
         reader.onloadend = () => {
           const base64 = (reader.result as string).split(',')[1];
-          handleAiChat("Comando de voz recebido", base64);
+          const finalText = transcriptRef.current || chatInput;
+          handleAiChat(finalText, base64);
         };
       };
       mediaRecorder.current.start();
@@ -193,6 +259,7 @@ const App: React.FC = () => {
 
   const stopRecording = () => {
     if (mediaRecorder.current && isRecording) {
+      if (recognitionRef.current) recognitionRef.current.stop();
       mediaRecorder.current.stop();
       setIsRecording(false);
       mediaRecorder.current.stream.getTracks().forEach(track => track.stop());
@@ -220,6 +287,15 @@ const App: React.FC = () => {
     }));
   };
 
+  const handleManualBalanceUpdate = () => {
+    const newVal = parseFloat(tempBalance.replace(',', '.'));
+    if (!isNaN(newVal)) {
+      setStats(prev => ({ ...prev, balance: newVal }));
+      triggerFireworks('#ffae00');
+      setIsEditingBalance(false);
+    }
+  };
+
   const toggleTask = (id: string) => {
     setTasks(prev => prev.map(t => {
       if (t.id === id && !t.completed) {
@@ -231,8 +307,49 @@ const App: React.FC = () => {
     }));
   };
 
-  const triggerFireworks = (color = '#10b981') => {
+  const handleAddGoal = () => {
+    if (newGoalTitle && newGoalTarget) {
+      const g: Goal = {
+        id: Date.now().toString(),
+        title: newGoalTitle,
+        target: Number(newGoalTarget),
+        current: 0,
+        unit: newGoalUnit || 'un',
+        completed: false
+      };
+      setGoals(prev => [g, ...prev]);
+      setNewGoalTitle('');
+      setNewGoalTarget('');
+      setNewGoalUnit('');
+    }
+  };
+
+  const handleUpdateGoal = (id: string, amount: number) => {
+    setGoals(prev => prev.map(g => {
+      if (g.id === id) {
+        const next = Math.min(g.target, Math.max(0, g.current + amount));
+        const justCompleted = next >= g.target && !g.completed;
+        if (justCompleted) {
+          triggerFireworks('#ff0000');
+          setStats(s => ({ ...s, xp: s.xp + 100 }));
+        }
+        return { ...g, current: next, completed: next >= g.target };
+      }
+      return g;
+    }));
+  };
+
+  const triggerFireworks = (color = '#ffae00') => {
     confetti({ particleCount: 40, spread: 70, origin: { y: 0.6 }, colors: [color] });
+  };
+
+  const autoClassifyForm = async () => {
+    if (newTransDesc.trim() && newTransAmount && newTransType === 'EXPENSE') {
+      setIsClassifying(true);
+      const cat = await classifyCategory(newTransDesc, Number(newTransAmount));
+      setSuggestedCategory(cat);
+      setIsClassifying(false);
+    }
   };
 
   if (!isLoaded) return null;
@@ -242,20 +359,20 @@ const App: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center p-6 bg-black text-white font-black">
         <Card className="w-full max-w-md bg-neutral-900 border-neutral-800 p-8 space-y-6">
           <div className="text-center">
-            <Sparkles className="mx-auto text-emerald-500 mb-4" size={48} />
-            <h1 className="text-3xl tracking-tighter uppercase">Nexus Core</h1>
-            <p className="text-neutral-500 text-xs mt-2 uppercase tracking-widest">Inicie sua jornada de elite</p>
+            <Sparkles className="mx-auto text-[#ffae00] mb-4" size={48} />
+            <h1 className="text-3xl tracking-tighter uppercase font-black">Nexus Core</h1>
+            <p className="text-neutral-500 text-xs mt-2 uppercase tracking-widest font-bold">Inicie sua jornada de elite</p>
           </div>
           <input 
             type="text" 
             placeholder="Seu nome" 
             value={userName} 
             onChange={e => setUserName(e.target.value)}
-            className="w-full bg-black border-2 border-neutral-800 focus:border-emerald-500 p-4 rounded-xl outline-none"
+            className="w-full bg-black border-2 border-neutral-800 focus:border-[#ffae00] p-4 rounded-xl outline-none font-bold text-center"
           />
           <button 
             onClick={() => setIsOnboarding(false)}
-            className="w-full py-4 bg-emerald-500 text-black uppercase tracking-widest rounded-xl hover:bg-emerald-400"
+            className="w-full py-4 bg-[#ffae00] text-black uppercase tracking-widest rounded-xl hover:bg-[#ff8800] font-black transition-colors"
           >
             Acessar Sistema
           </button>
@@ -264,25 +381,92 @@ const App: React.FC = () => {
     );
   }
 
+  const completedCount = tasks.filter(t => t.completed).length;
+  const totalCount = tasks.length;
+  const displayedTasks = tasks.slice(0, 3);
+  const remainingCount = totalCount > 3 ? totalCount - 3 : 0;
+
+  const activeGoalsCount = goals.filter(g => !g.completed).length;
+  const completedGoalsCount = goals.filter(g => g.completed).length;
+
+  const radarData = [
+    { label: 'Foco', value: totalCount > 0 ? (completedCount / totalCount) * 100 : 0, color: '#ff0000' },
+    { label: 'Finanças', value: Math.min(100, (stats.balance / 10000) * 100), color: '#ff0000' },
+    { label: 'XP', value: Math.min(100, (stats.xp / 5000) * 100), color: '#ff0000' },
+    { label: 'Energia', value: Math.min(100, (completedCount * 15) + (stats.balance > 0 ? 30 : 10) + 10), color: '#ff0000' },
+    { label: 'Metas', value: goals.length > 0 ? (completedGoalsCount / goals.length) * 100 : 0, color: '#ff0000' },
+  ];
+
+  const getWeeklyExpenses = () => {
+    const weeklyData = [0, 0, 0, 0, 0, 0, 0];
+    const today = new Date();
+    transactions.forEach(t => {
+      if (t.type === 'EXPENSE') {
+        const tDate = new Date(t.date);
+        const diffDays = Math.floor((today.getTime() - tDate.getTime()) / (1000 * 3600 * 24));
+        if (diffDays >= 0 && diffDays < 7) {
+          const dayIdx = (tDate.getDay() + 1) % 7; 
+          weeklyData[dayIdx] += t.amount;
+        }
+      }
+    });
+    return weeklyData;
+  };
+
+  const weeklyTasksData = [4, 2, 5, 8, 3, 7, 6];
+
+  // Logic for the summary cards in "ROTINA"
+  const getMostFrequentTask = () => {
+    const completedTasks = tasks.filter(t => t.completed);
+    if (completedTasks.length === 0) return { title: 'Nenhuma', count: 0 };
+    
+    const freq: Record<string, number> = {};
+    completedTasks.forEach(t => freq[t.title] = (freq[t.title] || 0) + 1);
+    
+    let max = 0;
+    let title = 'Nenhuma';
+    Object.entries(freq).forEach(([t, c]) => {
+      if (c > max) {
+        max = c;
+        title = t;
+      }
+    });
+    return { title, count: max };
+  };
+
+  const currentMonthName = new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(new Date());
+  const activeItemsCount = tasks.filter(t => !t.completed).length + goals.filter(g => !g.completed).length;
+  const mostDone = getMostFrequentTask();
+
+  // Date formatting for the Progress Card
+  const now = new Date();
+  const dayName = now.toLocaleDateString('pt-BR', { weekday: 'long' });
+  const dayNumber = now.getDate();
+  const monthName = now.toLocaleDateString('pt-BR', { month: 'long' });
+  const formattedToday = `${dayName.charAt(0).toUpperCase() + dayName.slice(1)}, ${dayNumber} De ${monthName.charAt(0).toUpperCase() + monthName.slice(1)}`;
+  
+  const completionPercentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col lg:flex-row font-black">
-      {/* Sidebar Desktop */}
+    <div className="min-h-screen bg-black text-white flex flex-col lg:flex-row font-black overflow-hidden selection:bg-[#ffae00] selection:text-black">
+      {/* Sidebar */}
       <aside className="hidden lg:flex flex-col w-64 border-r border-neutral-900 p-6 bg-black/50 backdrop-blur-md">
         <div className="flex items-center gap-2 mb-12">
-          <Sparkles className="text-emerald-500" />
-          <span className="text-xl tracking-tighter">NEXUS</span>
+          <Sparkles className="text-[#ffae00]" />
+          <span className="text-xl tracking-tighter font-black uppercase">Nexus OS</span>
         </div>
         <nav className="space-y-2 flex-1">
           {[
             { id: 'dashboard', icon: LayoutDashboard, label: 'Painel' },
             { id: 'finances', icon: Wallet, label: 'Finanças' },
-            { id: 'tasks', icon: CheckSquare, label: 'Tarefas' }
+            { id: 'tasks', icon: CheckSquare, label: 'Tarefas' },
+            { id: 'goals', icon: Flag, label: 'Metas' }
           ].map(item => (
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl uppercase text-[10px] tracking-widest transition-all ${
-                activeTab === item.id ? 'bg-emerald-500 text-black shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'text-neutral-500 hover:text-white'
+                activeTab === item.id ? 'bg-[#ffae00] text-black shadow-[0_0_15px_rgba(255,174,0,0.3)]' : 'text-neutral-500 hover:text-white'
               }`}
             >
               <item.icon size={18} />
@@ -290,254 +474,137 @@ const App: React.FC = () => {
             </button>
           ))}
         </nav>
-        <div className="p-4 bg-neutral-900 rounded-2xl border border-neutral-800 text-[10px]">
-          <div className="flex justify-between mb-1">
-            <span className="text-emerald-500 font-black">NÍVEL {Math.floor(stats.xp / 200) + 1}</span>
-            <span className="text-neutral-500">{stats.xp} XP</span>
-          </div>
-          <div className="h-1.5 bg-black rounded-full overflow-hidden">
-            <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${(stats.xp % 200) / 2}%` }} />
-          </div>
-        </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-4 sm:p-8 max-w-7xl mx-auto w-full pb-24 lg:pb-8">
+      <main className="flex-1 p-4 sm:p-8 max-w-7xl mx-auto w-full pb-32 lg:pb-8 overflow-y-auto h-screen no-scrollbar relative">
         {activeTab === 'dashboard' && (
-          <div className="space-y-8 animate-in fade-in duration-500">
-            <header>
-              <h2 className="text-3xl lg:text-5xl tracking-tighter">Olá, <span className="text-emerald-500">{userName}</span></h2>
-              <p className="text-[10px] text-neutral-500 uppercase tracking-widest mt-2 font-bold">{new Date().toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+          <div className="space-y-10 animate-in fade-in duration-500">
+            {/* Boas-vindas e Botão AI */}
+            <header className="space-y-6">
+              <div>
+                <h2 className="text-4xl lg:text-6xl tracking-tighter font-black">Bem-vindo, <span className="text-[#ffae00] uppercase">{userName}</span></h2>
+                <p className="text-[11px] text-neutral-500 uppercase tracking-widest mt-2 font-black">
+                  {new Date().toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                </p>
+              </div>
+
+              <button 
+                onClick={() => setIsAiOpen(true)}
+                className="flex items-center gap-3 px-8 py-5 bg-[#ffae00] text-black rounded-2xl font-black uppercase text-[12px] tracking-[0.25em] shadow-[0_15px_30px_rgba(255,174,0,0.15)] hover:bg-[#ff8800] hover:scale-[1.02] active:scale-95 transition-all w-full sm:w-auto text-center justify-center"
+              >
+                <Bot size={22} /> Falar com Nexus AI
+              </button>
             </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="relative overflow-hidden group">
-                <Wallet className="absolute -right-4 -top-4 opacity-10" size={80} />
-                <h4 className="text-[10px] text-neutral-500 uppercase tracking-widest mb-2 font-black">Saldo Atual</h4>
-                <div className="text-3xl tracking-tighter font-black">R$ <AnimatedNumber value={stats.balance} /></div>
+            {/* SEÇÃO DE MÉTRICAS */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="relative overflow-hidden group border-neutral-800/50 hover:border-[#ffae00]/30 transition-all p-8 bg-neutral-950/20 shadow-xl">
+                <Wallet className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity" size={100} />
+                <h4 className="text-[10px] text-neutral-500 uppercase tracking-[0.3em] mb-3 font-black">Quanto você tem na conta?</h4>
+                <div className="flex items-center gap-4">
+                  {isEditingBalance ? (
+                    <div className="flex gap-2 w-full animate-in zoom-in-95">
+                      <input autoFocus type="text" value={tempBalance} onChange={e => setTempBalance(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleManualBalanceUpdate()} className="flex-1 bg-black border-b-2 border-[#ffae00] p-2 text-2xl font-black outline-none" />
+                      <button onClick={handleManualBalanceUpdate} className="p-3 bg-[#ffae00] text-black rounded-xl"><Check size={20}/></button>
+                      <button onClick={() => setIsEditingBalance(false)} className="p-3 bg-neutral-800 text-neutral-400 rounded-xl"><X size={20}/></button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-4xl tracking-tighter font-black">R$ <AnimatedNumber value={stats.balance} /></div>
+                      <button onClick={() => { setTempBalance(stats.balance.toString()); setIsEditingBalance(true); }} className="p-2.5 text-neutral-600 hover:text-[#ffae00] transition-colors bg-neutral-950/50 rounded-xl border border-neutral-800" title="Editar Saldo Manualmente"><Edit2 size={18} /></button>
+                    </>
+                  )}
+                </div>
               </Card>
 
-              <Card>
-                <h4 className="text-[10px] text-neutral-500 uppercase tracking-widest mb-2 font-black">Pontuação XP</h4>
-                <div className="text-3xl tracking-tighter font-black">{stats.xp} <span className="text-sm text-neutral-500 uppercase">PONTOS</span></div>
-              </Card>
-
-              <Card className="md:col-span-1 border-emerald-500/20 bg-emerald-500/5">
-                <h4 className="text-[10px] text-emerald-500 uppercase tracking-widest mb-4 font-black">Nexus AI</h4>
-                <button 
-                  onClick={() => setIsAiOpen(true)}
-                  className="w-full flex items-center justify-between p-3 bg-emerald-500 text-black rounded-xl hover:bg-emerald-400 transition-all uppercase text-[10px] font-black"
-                >
-                  <Bot size={18} /> Iniciar Conversa
-                </button>
+              <Card className="p-8 bg-neutral-950/20 shadow-xl">
+                <h4 className="text-[10px] text-neutral-500 uppercase tracking-[0.3em] mb-3 font-black">Nível de Engajamento</h4>
+                <div className="text-4xl tracking-tighter font-black">
+                  {stats.xp} <span className="text-sm text-neutral-500 uppercase tracking-widest ml-1">XP</span>
+                </div>
+                <div className="mt-4 h-1.5 bg-black rounded-full overflow-hidden border border-neutral-800">
+                  <div className="h-full bg-[#ffae00] transition-all duration-1000" style={{ width: `${(stats.xp % 2000) / 20}%` }} />
+                </div>
               </Card>
             </div>
-          </div>
-        )}
 
-        {activeTab === 'finances' && (
-          <div className="space-y-8 animate-in fade-in duration-500">
-             <header>
-              <h2 className="text-3xl tracking-tighter font-black">Gestão <span className="text-emerald-500">Financeira</span></h2>
-            </header>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-               <Card>
-                  <h4 className="text-[10px] text-neutral-400 uppercase tracking-widest mb-6 flex items-center gap-2 font-black"><Plus size={16} className="text-emerald-500" /> Novo Registro</h4>
-                  <div className="space-y-4">
-                    <input 
-                      type="text" 
-                      placeholder="Descrição (ex: Aluguel, Salário)" 
-                      className="w-full bg-black border border-neutral-800 p-4 rounded-xl text-xs font-bold outline-none focus:border-emerald-500" 
-                      value={newTransDesc}
-                      onChange={e => setNewTransDesc(e.target.value)}
-                    />
-                    <div className="flex gap-4">
-                      <input 
-                        type="number" 
-                        placeholder="Valor R$" 
-                        className="flex-1 bg-black border border-neutral-800 p-4 rounded-xl text-xs font-bold outline-none focus:border-emerald-500"
-                        value={newTransAmount}
-                        onChange={e => setNewTransAmount(e.target.value)}
-                      />
-                      <select 
-                        className="bg-black border border-neutral-800 p-4 rounded-xl text-xs uppercase font-black outline-none"
-                        value={newTransType}
-                        onChange={e => setNewTransType(e.target.value as any)}
-                      >
-                        <option value="REVENUE">Entrada</option>
-                        <option value="EXPENSE">Saída</option>
-                      </select>
-                    </div>
-                    <button 
-                      onClick={() => handleAdjustBalance(newTransType === 'REVENUE' ? Number(newTransAmount) : -Number(newTransAmount), newTransDesc || "Lançamento manual", 'Geral')}
-                      className="w-full py-4 bg-emerald-500 text-black uppercase tracking-widest rounded-xl font-black shadow-lg hover:bg-emerald-400"
-                    >
-                      Registrar Agora
-                    </button>
+            {/* SEÇÃO CONTEXTUAL */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+              <div className="bg-neutral-900/40 border border-neutral-800 rounded-3xl p-8 animate-in slide-in-from-top-4 duration-700 min-h-[300px] flex flex-col shadow-2xl">
+                <h3 className="text-[14px] font-black uppercase tracking-[0.1em] text-white mb-6">RESUMO DO DIA</h3>
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-2">
+                    <Flame size={16} className="text-neutral-500" />
+                    <span className="text-[11px] font-black uppercase tracking-widest text-neutral-500">TAREFAS</span>
                   </div>
-               </Card>
-               <div className="space-y-4">
-                  <h4 className="text-[10px] text-neutral-400 uppercase tracking-widest flex items-center gap-2 font-black"><History size={16} className="text-emerald-500" /> Histórico</h4>
-                  <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 no-scrollbar">
-                    {transactions.map(t => (
-                      <div key={t.id} className="p-4 bg-neutral-900 border border-neutral-800 rounded-xl flex justify-between items-center">
-                        <div className="flex flex-col">
-                          <span className="text-[10px] text-white uppercase font-black">{t.description}</span>
-                          <span className="text-[8px] text-neutral-500 uppercase">{new Date(t.date).toLocaleDateString('pt-BR')}</span>
+                  <span className="text-[11px] font-black text-neutral-500">{completedCount}/{totalCount}</span>
+                </div>
+                <div className="space-y-6 flex-1">
+                  {totalCount === 0 ? (
+                    <div className="flex-1 flex items-center justify-center border border-dashed border-neutral-800 rounded-2xl">
+                      <p className="text-[10px] text-neutral-600 uppercase font-black tracking-[0.2em]">Sem tarefas ativas</p>
+                    </div>
+                  ) : (
+                    displayedTasks.map((task) => (
+                      <div key={task.id} onClick={() => toggleTask(task.id)} className="flex items-center gap-5 group cursor-pointer">
+                        <div className={`w-6 h-6 rounded-full border-2 transition-all flex items-center justify-center shrink-0 ${task.completed ? 'bg-[#ffae00] border-[#ffae00] shadow-[0_0_10px_rgba(255,174,0,0.3)]' : 'border-neutral-800 group-hover:border-neutral-600'}`}>
+                          {task.completed && <Check size={14} className="text-black" />}
                         </div>
-                        <span className={`text-xs font-black ${t.type === 'REVENUE' ? 'text-emerald-500' : 'text-rose-500'}`}>
-                          {t.type === 'REVENUE' ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR')}
+                        <span className={`text-[14px] font-bold tracking-tight transition-all ${task.completed ? 'text-neutral-600 line-through' : 'text-neutral-200'}`}>
+                          {task.title}
                         </span>
                       </div>
-                    ))}
+                    ))
+                  )}
+                </div>
+                {remainingCount > 0 && (
+                  <button onClick={() => setActiveTab('tasks')} className="w-full text-center mt-6 pt-4 border-t border-neutral-800/50">
+                    <span className="text-[11px] font-black text-neutral-500 uppercase tracking-[0.2em] hover:text-white transition-colors">+{remainingCount} tarefas</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-8">
+                <div className="bg-neutral-900/40 border border-neutral-800 rounded-3xl p-8 flex flex-col items-center justify-center relative overflow-hidden animate-in slide-in-from-right-4 duration-1000 shadow-2xl h-full">
+                  <div className="absolute top-8 left-8 flex items-center gap-2">
+                    <Zap size={16} className="text-[#ffae00]" />
+                    <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-neutral-400">VISÃO GERAL</h3>
                   </div>
+                  <RadarScoreChart data={radarData} size={280} />
+                </div>
+              </div>
+            </div>
+
+            {/* SEÇÃO DE HISTÓRICO E METAS */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in slide-in-from-bottom-6 duration-1000">
+               <Card className="p-8 shadow-2xl bg-neutral-900/40">
+                  <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-3">
+                      <BarChart3 size={20} className="text-[#ff0000]" />
+                      <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-white">HISTÓRICO DE TAREFAS (SÁB-SEX)</h3>
+                    </div>
+                  </div>
+                  <WeeklyTaskChart data={weeklyTasksData} />
+               </Card>
+
+               <div className="flex flex-col gap-8">
+                  <Card className="p-8 shadow-2xl bg-neutral-900/40">
+                    <GoalProgressCard activeCount={activeGoalsCount} completedCount={completedGoalsCount} />
+                  </Card>
+                  
+                  <Card className="p-8 shadow-2xl bg-neutral-900/40">
+                    <WeeklyExpensesChart data={getWeeklyExpenses()} />
+                  </Card>
+
+                  <Card className="p-8 shadow-2xl bg-neutral-900/40">
+                    <CategoryExpensesChart transactions={transactions} />
+                  </Card>
                </div>
             </div>
           </div>
         )}
-
-        {activeTab === 'tasks' && (
-          <div className="space-y-8 animate-in fade-in">
-             <header>
-              <h2 className="text-3xl tracking-tighter font-black">Obrigações <span className="text-emerald-500">Diárias</span></h2>
-            </header>
-            <Card className="max-w-2xl">
-              <div className="flex gap-2 mb-6">
-                <input 
-                  type="text" 
-                  placeholder="Nova tarefa..." 
-                  className="flex-1 bg-black border border-neutral-800 p-4 rounded-xl text-xs font-black outline-none focus:border-emerald-500"
-                  value={newTaskTitle}
-                  onChange={e => setNewTaskTitle(e.target.value)}
-                />
-                <button 
-                  onClick={() => {
-                    if (newTaskTitle.trim()) {
-                      setTasks(prev => [{ id: Date.now().toString(), title: newTaskTitle, priority: Priority.MEDIUM, completed: false, xpValue: 20 }, ...prev]);
-                      setNewTaskTitle('');
-                    }
-                  }}
-                  className="p-4 bg-emerald-500 text-black rounded-xl"
-                ><Plus size={20} /></button>
-              </div>
-              <div className="space-y-3">
-                {tasks.map(task => (
-                  <div 
-                    key={task.id} 
-                    onClick={() => toggleTask(task.id)}
-                    className={`p-4 border rounded-xl flex items-center gap-4 cursor-pointer transition-all ${task.completed ? 'opacity-40 bg-neutral-900 border-neutral-800' : 'border-neutral-800 hover:border-emerald-500/50'}`}
-                  >
-                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${task.completed ? 'bg-emerald-500 border-emerald-500' : 'border-neutral-700'}`}>
-                      {task.completed && <Check size={12} className="text-black" />}
-                    </div>
-                    <span className={`text-xs uppercase font-black flex-1 ${task.completed ? 'line-through' : ''}`}>{task.title}</span>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          </div>
-        )}
       </main>
-
-      {/* Nexus AI - Floating Chat */}
-      {isAiOpen && (
-        <div className="fixed inset-0 lg:inset-auto lg:bottom-10 lg:right-8 lg:w-96 lg:h-[600px] bg-black/95 backdrop-blur-2xl border border-neutral-800 lg:rounded-3xl flex flex-col z-[100] shadow-2xl animate-in slide-in-from-bottom-8 duration-500">
-          <div className="p-6 border-b border-neutral-800 flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <Bot className="text-emerald-500" />
-              <span className="uppercase text-[10px] tracking-widest font-black">Nexus Core AI</span>
-            </div>
-            <button onClick={() => setIsAiOpen(false)} className="text-neutral-500 hover:text-white transition-colors"><X size={20} /></button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-6 space-y-4 no-scrollbar">
-            {messages.length === 0 && (
-              <div className="text-center py-12 space-y-4">
-                <ShieldCheck className="mx-auto text-emerald-500 opacity-20" size={48} />
-                <p className="text-[10px] text-neutral-500 uppercase tracking-widest font-black">Sincronização Ativa</p>
-                <p className="text-xs text-neutral-400 italic">"Gastei 50 reais em transporte hoje" ou "Adicione Estudar Inglês à minha lista"</p>
-              </div>
-            )}
-            {messages.map((m, i) => (
-              <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] p-4 rounded-2xl text-[11px] uppercase tracking-tight font-black ${
-                  m.role === 'user' ? 'bg-emerald-500 text-black shadow-lg shadow-emerald-500/10' : 
-                  m.role === 'system' ? 'bg-neutral-800 text-neutral-400 text-center w-full' : 'bg-neutral-900 text-white'
-                }`}>
-                  {m.text}
-                </div>
-              </div>
-            ))}
-            {isAiLoading && <div className="text-emerald-500 animate-pulse text-[10px] uppercase font-black px-4">Nexus Processando...</div>}
-          </div>
-
-          <div className="p-6 border-t border-neutral-800 space-y-4 bg-black/50 pb-10 lg:pb-6">
-            {showMicPrompt ? (
-              <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl space-y-3">
-                <p className="text-[10px] text-emerald-500 font-black uppercase text-center">Permitir acesso ao microfone?</p>
-                <div className="flex gap-2">
-                  <button onClick={requestMicAccess} className="flex-1 py-2 bg-emerald-500 text-black rounded-lg text-[10px] font-black uppercase">Sim</button>
-                  <button onClick={() => setShowMicPrompt(false)} className="flex-1 py-2 bg-neutral-800 text-neutral-400 rounded-lg text-[10px] font-black uppercase">Não</button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex gap-2">
-                <input 
-                  type="text" 
-                  placeholder="Comando Nexus..."
-                  value={chatInput}
-                  onChange={e => setChatInput(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && chatInput.trim() && handleAiChat(chatInput)}
-                  className="flex-1 bg-neutral-900 border border-neutral-800 p-4 rounded-xl text-xs outline-none focus:border-emerald-500 font-bold"
-                />
-                <button 
-                  onMouseDown={startRecording}
-                  onMouseUp={stopRecording}
-                  onMouseLeave={stopRecording}
-                  className={`p-4 rounded-xl transition-all ${isRecording ? 'bg-rose-500 text-white animate-pulse' : 'bg-neutral-800 text-neutral-500 hover:text-emerald-500'}`}
-                >
-                  <Mic size={20} />
-                </button>
-                <button 
-                  onClick={() => chatInput.trim() && handleAiChat(chatInput)}
-                  className="p-4 bg-emerald-500 text-black rounded-xl"
-                ><Send size={20} /></button>
-              </div>
-            )}
-            <p className="text-[8px] text-neutral-600 text-center uppercase tracking-widest font-black">
-              {isRecording ? "ESCUTANDO COMANDO..." : "SEGURE O ÍCONE PARA FALAR"}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Mobile Nav - Oculto quando chat está aberto para evitar colisão */}
-      {!isAiOpen && (
-        <nav className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-neutral-900/90 backdrop-blur-xl border border-neutral-800 p-2 rounded-2xl z-50 shadow-2xl">
-          {[
-            { id: 'dashboard', icon: LayoutDashboard },
-            { id: 'finances', icon: Wallet },
-            { id: 'tasks', icon: CheckSquare }
-          ].map(item => (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`p-4 rounded-xl transition-all ${activeTab === item.id ? 'bg-emerald-500 text-black' : 'text-neutral-500'}`}
-            >
-              <item.icon size={20} />
-            </button>
-          ))}
-          <div className="w-[1px] h-6 bg-neutral-800 mx-1"></div>
-          <button 
-            onClick={() => setIsAiOpen(true)}
-            className="p-4 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
-          >
-            <Bot size={20} />
-          </button>
-        </nav>
-      )}
     </div>
   );
 };
-
-export default App;

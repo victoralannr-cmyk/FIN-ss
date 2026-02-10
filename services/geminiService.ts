@@ -12,7 +12,7 @@ const controlTools: FunctionDeclaration[] = [
         amount: { type: Type.NUMBER, description: 'O valor da transação.' },
         type: { type: Type.STRING, description: 'O tipo da transação: REVENUE (receita) ou EXPENSE (despesa).' },
         description: { type: Type.STRING, description: 'Breve descrição do que se trata.' },
-        category: { type: Type.STRING, description: 'Categoria (Ex: Moradia, Lazer, Freelance).' }
+        category: { type: Type.STRING, description: 'Categoria específica conforme as diretrizes do sistema.' }
       },
       required: ['amount', 'type', 'description']
     }
@@ -41,6 +41,45 @@ const controlTools: FunctionDeclaration[] = [
   }
 ];
 
+export const classifyCategory = async (description: string, amount: number) => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const promptInstruction = `
+    Função exclusiva: classificar gastos por categoria.
+    Você NÃO é um assistente de conversa.
+    Você NÃO deve aconselhar, explicar, sugerir ou interagir com o usuário.
+    Tarefa única: Identificar a categoria de gasto mais provável.
+    Categorias permitidas: Alimentação, Moradia, Transporte, Saúde, Lazer, Educação, Compras pessoais, Assinaturas e serviços, Impostos e taxas, Outros.
+    Retorne APENAS o JSON no formato: {"categoria": "NomeDaCategoria"}
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Descrição: ${description}, Valor: ${amount}`,
+      config: {
+        responseMimeType: "application/json",
+        systemInstruction: promptInstruction,
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            categoria: { 
+              type: Type.STRING,
+              description: 'A categoria classificada.'
+            }
+          },
+          required: ['categoria']
+        }
+      }
+    });
+
+    const result = JSON.parse(response.text || '{}');
+    return result.categoria || 'Outros';
+  } catch (error) {
+    console.error("Erro na classificação automática:", error);
+    return 'Outros';
+  }
+};
+
 export const processAICmd = async (message: string, audioBase64?: string) => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
@@ -49,7 +88,7 @@ export const processAICmd = async (message: string, audioBase64?: string) => {
   if (audioBase64) {
     contents.push({
       inlineData: {
-        mimeType: 'audio/webm', // Ajustado para o padrão do navegador
+        mimeType: 'audio/webm',
         data: audioBase64
       }
     });
@@ -62,13 +101,10 @@ export const processAICmd = async (message: string, audioBase64?: string) => {
       model: 'gemini-3-flash-preview',
       contents: { parts: contents },
       config: {
-        systemInstruction: `Você é o Nexus Core, um sistema operacional de alta performance. 
-        Sua única função é gerenciar as finanças e tarefas do usuário.
-        Seja curto, grosso e eficiente. 
-        Ao receber comandos de valores, use a função add_transaction para registrar.
-        Para metas de saldo, use update_balance.
-        Para novas obrigações, use add_task.
-        Confirme sempre a ação realizada.`,
+        systemInstruction: `Você é o Nexus Core. Gerencie finanças e tarefas. 
+        Para transações, use add_transaction. 
+        IMPORTANTE: Use as categorias exatas: Alimentação, Moradia, Transporte, Saúde, Lazer, Educação, Compras pessoais, Assinaturas e serviços, Impostos e taxas, Outros.
+        Seja extremamente eficiente.`,
         tools: [{ functionDeclarations: controlTools }]
       }
     });

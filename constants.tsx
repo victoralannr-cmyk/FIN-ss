@@ -10,19 +10,28 @@ export const INITIAL_ACHIEVEMENTS: Achievement[] = [
 ];
 
 export const CATEGORIES = [
-  'Moradia', 'Alimentação', 'Transporte', 'Lazer', 'Saúde', 'Educação', 'Investimentos', 'Outros'
+  'Alimentação', 
+  'Moradia', 
+  'Transporte', 
+  'Saúde', 
+  'Lazer', 
+  'Educação', 
+  'Compras pessoais', 
+  'Assinaturas e serviços', 
+  'Impostos e taxas', 
+  'Outros'
 ];
 
 export const XP_REQUIREMENTS = {
   [Rank.INICIANTE]: 0,
-  [Rank.INTERMEDIARIO]: 2500, // Aumentado de 1000
-  [Rank.AVANCADO]: 10000,    // Aumentado de 5000
-  [Rank.ELITE]: 30000,       // Aumentado de 15000
+  [Rank.INTERMEDIARIO]: 2500,
+  [Rank.AVANCADO]: 10000,
+  [Rank.ELITE]: 30000,
 };
 
 export const RANK_COLORS = {
   [Rank.INICIANTE]: 'text-gray-400',
   [Rank.INTERMEDIARIO]: 'text-blue-400',
   [Rank.AVANCADO]: 'text-purple-400',
-  [Rank.ELITE]: 'text-emerald-400',
+  [Rank.ELITE]: 'text-[#ffae00]',
 };
