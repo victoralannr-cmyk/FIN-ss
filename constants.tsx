@@ -15,9 +15,9 @@ export const CATEGORIES = [
 
 export const XP_REQUIREMENTS = {
   [Rank.INICIANTE]: 0,
-  [Rank.INTERMEDIARIO]: 1000,
-  [Rank.AVANCADO]: 5000,
-  [Rank.ELITE]: 15000,
+  [Rank.INTERMEDIARIO]: 2500, // Aumentado de 1000
+  [Rank.AVANCADO]: 10000,    // Aumentado de 5000
+  [Rank.ELITE]: 30000,       // Aumentado de 15000
 };
 
 export const RANK_COLORS = {
