@@ -50,12 +50,13 @@
 </head>
 <body class="bg-black text-white selection:bg-emerald-500 selection:text-black">
     <div id="root"></div>
-    <!-- O Vite gerencia os módulos automaticamente. Não use importmaps aqui. -->
+    
+    <!-- O Vite gerencia os módulos automaticamente. -->
     <script type="module" src="/index.tsx"></script>
     
     <script>
       window.onerror = function(msg, url, lineNo, columnNo, error) {
-        console.error('Nexus Core - Erro Crítico:', msg, error);
+        console.error('Nexus Core - Erro Detectado:', msg, error);
         return false;
       };
     </script>
