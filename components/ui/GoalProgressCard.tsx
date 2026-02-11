@@ -15,11 +15,11 @@ export const GoalProgressCard: React.FC<GoalProgressCardProps> = ({ activeCount,
   const offset = circumference - (percentage / 100) * circumference;
 
   return (
-    <div className="flex flex-col h-full">
-      <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-white mb-8">PROGRESSO DE METAS</h3>
+    <div className="flex flex-col h-full w-full">
+      <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-white mb-6 lg:mb-8 text-center sm:text-left">PROGRESSO DE METAS</h3>
       
-      <div className="flex-1 flex flex-col justify-between">
-        <div className="flex items-center justify-center relative py-4">
+      <div className="flex-1 flex flex-col justify-between items-center w-full">
+        <div className="flex items-center justify-center relative py-4 w-full">
           <div className="relative w-32 h-32 flex items-center justify-center">
             <svg className="absolute inset-0 w-32 h-32 transform -rotate-90">
               {/* Background Circle */}
@@ -46,13 +46,13 @@ export const GoalProgressCard: React.FC<GoalProgressCardProps> = ({ activeCount,
                 className="transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(212,175,55,0.5)]"
               />
             </svg>
-            <div className="relative z-10 flex flex-col items-center justify-center">
-              <span className="text-2xl font-black text-white leading-none">{percentage}%</span>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-2xl font-black text-white leading-none text-center tabular-nums">{percentage}%</span>
             </div>
           </div>
         </div>
 
-        <div className="flex justify-between items-end mt-4">
+        <div className="flex justify-between items-end w-full mt-4 lg:mt-6 px-2">
           <div className="flex flex-col items-center">
             <span className="text-xl font-black text-[#d4af37] leading-none">{activeCount}</span>
             <span className="text-[9px] font-black text-neutral-500 uppercase tracking-widest mt-1">Ativas</span>

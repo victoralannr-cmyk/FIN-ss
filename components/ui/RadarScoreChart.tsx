@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 
 interface RadarData {
@@ -15,13 +14,13 @@ interface RadarScoreChartProps {
 export const RadarScoreChart: React.FC<RadarScoreChartProps> = ({ data, size = 320 }) => {
   const centerX = size / 2;
   const centerY = size / 2;
-  const radius = (size / 2) * 0.7;
+  const radius = (size / 2) * 0.65;
+  const themeColor = "#d4af37";
 
   const averageScore = useMemo(() => {
     return Math.round(data.reduce((acc, curr) => acc + curr.value, 0) / data.length);
   }, [data]);
 
-  // Helper to calculate coordinates for a point on the radar
   const getCoordinates = (index: number, value: number, total: number, r: number) => {
     const angle = (Math.PI * 2 * index) / total - Math.PI / 2;
     return {
@@ -32,14 +31,13 @@ export const RadarScoreChart: React.FC<RadarScoreChartProps> = ({ data, size = 3
 
   const getLabelCoordinates = (index: number, total: number, r: number) => {
     const angle = (Math.PI * 2 * index) / total - Math.PI / 2;
-    const labelOffset = size * 0.12; // Dynamic offset based on size
+    const labelOffset = size * 0.15;
     return {
       x: centerX + (r + labelOffset) * Math.cos(angle),
       y: centerY + (r + labelOffset) * Math.sin(angle),
     };
   };
 
-  // Generate grid polygons (the "spider web")
   const gridLevels = [25, 50, 75, 100];
   const gridPaths = gridLevels.map((level) => {
     return data.map((_, i) => {
@@ -48,22 +46,21 @@ export const RadarScoreChart: React.FC<RadarScoreChartProps> = ({ data, size = 3
     }).join(' ');
   });
 
-  // Generate the actual data polygon
   const dataPoints = data.map((d, i) => {
     const { x, y } = getCoordinates(i, d.value, data.length, radius);
     return `${x},${y}`;
   }).join(' ');
 
   return (
-    <div className="relative flex items-center justify-center select-none group animate-in fade-in zoom-in-95 duration-1000">
-      <svg width={size} height={size} className="overflow-visible drop-shadow-[0_0_30px_rgba(255,0,0,0.1)]">
+    <div className="relative flex items-center justify-center select-none group animate-in fade-in zoom-in-95 duration-1000 w-full max-w-[320px] mx-auto">
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="overflow-visible drop-shadow-[0_0_30px_rgba(212,175,55,0.1)] w-full h-auto">
         {/* Background Grid */}
         {gridPaths.map((path, i) => (
           <polygon
             key={i}
             points={path}
             fill="none"
-            stroke="rgba(255, 255, 255, 0.05)"
+            stroke="rgba(212, 175, 55, 0.1)"
             strokeWidth="1"
           />
         ))}
@@ -78,7 +75,7 @@ export const RadarScoreChart: React.FC<RadarScoreChartProps> = ({ data, size = 3
               y1={centerY}
               x2={x}
               y2={y}
-              stroke="rgba(255, 255, 255, 0.05)"
+              stroke="rgba(212, 175, 55, 0.1)"
               strokeWidth="1"
             />
           );
@@ -87,8 +84,8 @@ export const RadarScoreChart: React.FC<RadarScoreChartProps> = ({ data, size = 3
         {/* Data Polygon Fill */}
         <polygon
           points={dataPoints}
-          fill="rgba(255, 0, 0, 0.15)"
-          stroke="#ff0000"
+          fill="rgba(212, 175, 55, 0.2)"
+          stroke={themeColor}
           strokeWidth="2.5"
           className="transition-all duration-700 ease-out"
         />
@@ -101,11 +98,11 @@ export const RadarScoreChart: React.FC<RadarScoreChartProps> = ({ data, size = 3
               key={i}
               x={x}
               y={y}
-              fill="#ff0000"
-              fontSize={size * 0.03} 
-              fontWeight="600"
+              fill={themeColor}
+              fontSize={10} 
+              fontWeight="700"
               textAnchor="middle"
-              className="uppercase tracking-widest opacity-80"
+              className="uppercase tracking-[0.2em] opacity-80"
               style={{ fontFamily: 'var(--font-main)' }}
             >
               {d.label}
@@ -116,8 +113,8 @@ export const RadarScoreChart: React.FC<RadarScoreChartProps> = ({ data, size = 3
 
       {/* Central Score */}
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-        <span className="text-3xl sm:text-5xl font-bold text-white tracking-tighter leading-none">{averageScore}</span>
-        <span className="text-[8px] sm:text-[10px] font-medium text-neutral-500 uppercase tracking-[0.3em] mt-1">Score</span>
+        <span className="text-4xl font-bold text-white tracking-tighter leading-none">{averageScore}</span>
+        <span className="text-[10px] font-medium text-neutral-500 uppercase tracking-[0.3em] mt-1">Nível</span>
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Plus, 
@@ -106,6 +107,11 @@ export const App: React.FC = () => {
   const [newTransAmount, setNewTransAmount] = useState('');
   const [newTransType, setNewTransType] = useState<'REVENUE' | 'EXPENSE'>('EXPENSE');
   const [newTransCategory, setNewTransCategory] = useState('Outros');
+
+  // Estados para nova meta (substituindo prompt)
+  const [isAddingGoal, setIsAddingGoal] = useState(false);
+  const [newGoalTitle, setNewGoalTitle] = useState('');
+  const [newGoalTarget, setNewGoalTarget] = useState('');
 
   const formatAsCurrencyInput = (value: string) => {
     let digits = value.replace(/\D/g, "");
@@ -253,24 +259,25 @@ export const App: React.FC = () => {
     triggerFireworks();
   };
 
-  const handleAddGoal = async () => {
-    const title = prompt("Qual sua meta estratégica?");
-    const targetInput = prompt("Qual o valor alvo numérico?");
-    if (!title || !targetInput) return;
-    const target = parseFloat(targetInput);
-    if (isNaN(target)) return alert("Valor inválido.");
-    
-    const emoji = await suggestEmoji(title);
+  const handleCreateGoal = async () => {
+    if (!newGoalTitle.trim() || !newGoalTarget) return;
+    const target = parseFloat(newGoalTarget.replace(/\D/g, "")) / 100;
+    if (isNaN(target)) return;
+
+    const emoji = await suggestEmoji(newGoalTitle);
     const newGoal: Goal = {
       id: Date.now().toString(),
-      title: title,
+      title: newGoalTitle,
       target: target,
       current: 0,
-      unit: 'un',
+      unit: 'R$',
       completed: false,
       emoji: emoji
     };
     setGoals(prev => [...prev, newGoal]);
+    setNewGoalTitle('');
+    setNewGoalTarget('');
+    setIsAddingGoal(false);
     triggerFireworks('#d4af37');
   };
 
@@ -339,7 +346,7 @@ export const App: React.FC = () => {
   if (isOnboarding) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-black text-white">
-        <Card className="w-full max-w-md bg-neutral-900 border-neutral-800 p-12 space-y-12 rounded-[2.5rem]">
+        <Card className="w-full max-w-md bg-neutral-900 border-neutral-800 p-8 sm:p-12 space-y-12 rounded-[2.5rem]">
           <div className="text-center space-y-6">
             <VWalletLogo className="w-24 h-24 mx-auto mb-2" />
             <h1 className="text-4xl text-chique font-bold">VWallet</h1>
@@ -410,21 +417,23 @@ export const App: React.FC = () => {
         </nav>
       </aside>
 
-      <main className="flex-1 p-6 sm:p-12 max-w-7xl mx-auto w-full pb-32 lg:pb-12 overflow-y-auto h-screen no-scrollbar relative">
+      <main className="flex-1 p-4 sm:p-8 lg:p-12 max-w-7xl mx-auto w-full pb-32 lg:pb-12 overflow-y-auto h-screen no-scrollbar relative">
         {activeTab === 'dashboard' && (
-          <div className="space-y-12 animate-in fade-in duration-1000">
-            <header className="flex justify-between items-start gap-8">
-              <div className="space-y-4">
-                <h2 className="text-4xl lg:text-6xl font-bold tracking-tight">Olá, <span className="text-[#d4af37] uppercase">{userName}</span></h2>
-                <p className="text-[10px] text-neutral-600 uppercase tracking-[0.6em] font-medium">{new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())}</p>
+          <div className="space-y-8 lg:space-y-12 animate-in fade-in duration-1000">
+            <header className="flex flex-col sm:flex-row justify-between items-start gap-6 sm:gap-8">
+              <div className="space-y-2 lg:space-y-4">
+                <h2 className="text-3xl lg:text-6xl font-bold tracking-tight">Olá, <span className="text-[#d4af37] uppercase">{userName}</span></h2>
+                <p className="text-sm lg:text-base text-white uppercase tracking-[0.2em] font-black border-l-4 border-[#d4af37] pl-4">
+                  {new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())}
+                </p>
               </div>
-              <button onClick={() => setIsAiOpen(true)} className="btn-modern p-6 bg-neutral-900 border border-[#d4af37]/20 text-white rounded-full font-bold shadow-xl"><Bot size={24} /></button>
+              <button onClick={() => setIsAiOpen(true)} className="btn-modern p-5 lg:p-6 bg-neutral-900 border border-[#d4af37]/20 text-white rounded-full font-bold shadow-xl"><Bot size={24} /></button>
             </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-              <Card className="relative overflow-hidden p-12 bg-neutral-950 border-neutral-900 shadow-2xl group rounded-[2.5rem]">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-10">
+              <Card className="relative overflow-hidden p-8 lg:p-12 bg-neutral-950 border-neutral-900 shadow-2xl group rounded-[2.5rem]">
                 <Wallet className="absolute -right-8 -top-8 text-neutral-800 opacity-20 rotate-12" size={120} />
-                <h4 className="text-[11px] text-neutral-600 uppercase tracking-[0.5em] mb-6 font-medium">Balanço Patrimonial Total</h4>
+                <h4 className="text-sm lg:text-base text-[#d4af37] uppercase tracking-[0.25em] mb-4 lg:mb-6 font-black drop-shadow-sm">Balanço Patrimonial Total</h4>
                 <div className="flex items-center gap-5">
                    {isEditingBalance ? (
                      <div className="flex items-center gap-2">
@@ -432,7 +441,7 @@ export const App: React.FC = () => {
                          type="text" 
                          value={tempBalance}
                          onChange={e => setTempBalance(formatAsCurrencyInput(e.target.value))}
-                         className="bg-black border-b-2 border-[#d4af37] text-3xl font-semibold w-56 outline-none"
+                         className="bg-black border-b-2 border-[#d4af37] text-2xl lg:text-3xl font-semibold w-48 lg:w-56 outline-none"
                          autoFocus
                          onKeyDown={e => e.key === 'Enter' && handleUpdateTotalBalance()}
                        />
@@ -440,40 +449,44 @@ export const App: React.FC = () => {
                      </div>
                    ) : (
                      <>
-                       <div className="text-5xl font-bold tracking-tighter">R$ <AnimatedNumber value={totalEquity} /></div>
-                       <button onClick={() => { setTempBalance(totalEquity.toLocaleString('pt-BR', { minimumFractionDigits: 2 })); setIsEditingBalance(true); }} className="p-4 bg-neutral-900 rounded-full hover:text-[#d4af37] transition-colors"><Pencil size={18} /></button>
+                       <div className="text-3xl lg:text-5xl font-bold tracking-tighter text-white">R$ <AnimatedNumber value={totalEquity} /></div>
+                       <button onClick={() => { setTempBalance(totalEquity.toLocaleString('pt-BR', { minimumFractionDigits: 2 })); setIsEditingBalance(true); }} className="p-3 lg:p-4 bg-neutral-900 rounded-full hover:text-[#d4af37] transition-colors"><Pencil size={18} /></button>
                      </>
                    )}
                 </div>
               </Card>
 
-              <Card className="p-12 bg-neutral-950 border-neutral-900 shadow-2xl rounded-[2.5rem]">
-                <h4 className="text-[11px] text-neutral-600 uppercase tracking-[0.5em] mb-6 font-medium">Performance Nero</h4>
-                <div className="text-5xl font-bold">{stats.xp} <span className="text-sm font-normal">XP</span></div>
-                <div className="mt-8 h-2 bg-neutral-900 rounded-full overflow-hidden border border-neutral-800">
+              <Card className="p-8 lg:p-12 bg-neutral-950 border-neutral-900 shadow-2xl rounded-[2.5rem]">
+                <h4 className="text-sm lg:text-base text-[#d4af37] uppercase tracking-[0.25em] mb-4 lg:mb-6 font-black drop-shadow-sm">Performance Nero</h4>
+                <div className="text-3xl lg:text-5xl font-bold text-white">{stats.xp} <span className="text-sm font-normal text-neutral-400">XP</span></div>
+                <div className="mt-6 lg:mt-8 h-2 bg-neutral-900 rounded-full overflow-hidden border border-neutral-800">
                   <div className="h-full bg-gradient-to-r from-[#b8860b] to-[#d4af37] transition-all duration-1000" style={{ width: `${(stats.xp % 2000) / 20}%` }} />
                 </div>
               </Card>
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
-              <Card className="bg-neutral-950 border border-neutral-900 rounded-[3rem] p-12 flex flex-col shadow-2xl">
-                <h3 className="text-xs font-semibold uppercase tracking-[0.3em] text-white mb-10 border-b border-neutral-900 pb-6 opacity-60">Diretrizes do Dia</h3>
-                <div className="space-y-8 flex-1">
-                  {tasks.slice(0, 4).map((task) => (
-                    <div key={task.id} onClick={() => toggleTask(task.id)} className="flex items-center gap-8 group cursor-pointer transition-all">
-                      <div className={`w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center shrink-0 ${task.completed ? 'bg-[#d4af37] border-[#d4af37]' : 'border-neutral-800 group-hover:border-neutral-500'}`}>
-                        {task.completed && <Check size={16} className="text-black" strokeWidth={3} />}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-10">
+              <Card className="bg-neutral-950 border border-neutral-900 rounded-[2.5rem] lg:rounded-[3rem] p-8 lg:p-12 flex flex-col shadow-2xl">
+                <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-6 lg:mb-10 border-b border-neutral-900 pb-4 lg:pb-6">Diretrizes do Dia</h3>
+                <div className="space-y-6 lg:space-y-8 flex-1">
+                  {tasks.length === 0 ? (
+                    <p className="text-xs text-neutral-500 uppercase italic">Nenhuma diretriz pendente.</p>
+                  ) : (
+                    tasks.slice(0, 4).map((task) => (
+                      <div key={task.id} onClick={() => toggleTask(task.id)} className="flex items-center gap-6 lg:gap-8 group cursor-pointer transition-all">
+                        <div className={`w-6 h-6 lg:w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center shrink-0 ${task.completed ? 'bg-[#d4af37] border-[#d4af37]' : 'border-neutral-800 group-hover:border-neutral-500'}`}>
+                          {task.completed && <Check size={14} className="text-black" strokeWidth={3} />}
+                        </div>
+                        <span className={`text-lg lg:text-xl font-normal tracking-tight transition-all uppercase ${task.completed ? 'text-neutral-700 line-through' : 'text-neutral-200'}`}>
+                          {task.emoji && <span className="mr-3">{task.emoji}</span>}
+                          {task.title}
+                        </span>
                       </div>
-                      <span className={`text-xl font-normal tracking-tight transition-all uppercase ${task.completed ? 'text-neutral-700 line-through' : 'text-neutral-200'}`}>
-                        {task.emoji && <span className="mr-3">{task.emoji}</span>}
-                        {task.title}
-                      </span>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </Card>
-              <div className="bg-neutral-950 border border-neutral-900 rounded-[3rem] p-12 flex flex-col items-center justify-center relative shadow-2xl overflow-hidden">
+              <div className="bg-neutral-950 border border-neutral-900 rounded-[2.5rem] lg:rounded-[3rem] p-8 lg:p-12 flex flex-col items-center justify-center relative shadow-2xl overflow-hidden min-h-[350px]">
                 <RadarScoreChart data={[
                   { label: 'Foco', value: totalCount > 0 ? (completedCount / totalCount) * 100 : 0, color: '#d4af37' },
                   { label: 'Fluxo', value: Math.min(100, (totalEquity / 10000) * 100), color: '#d4af37' },
@@ -487,17 +500,17 @@ export const App: React.FC = () => {
         )}
 
         {activeTab === 'finances' && (
-          <div className="space-y-12 pb-24">
-            <header className="flex flex-col items-center gap-10">
-              <div className="flex items-center gap-10">
-                <button onClick={() => changeMonth(-1)} className="p-4 bg-neutral-900/50 rounded-2xl border border-neutral-800"><ChevronLeft size={24} /></button>
-                <h2 className="text-3xl font-bold uppercase">{currentMonthName}</h2>
-                <button onClick={() => changeMonth(1)} className="p-4 bg-neutral-900/50 rounded-2xl border border-neutral-800"><ChevronRight size={24} /></button>
+          <div className="space-y-8 lg:space-y-12 pb-24">
+            <header className="flex flex-col items-center gap-6 lg:gap-10">
+              <div className="flex items-center gap-6 lg:gap-10">
+                <button onClick={() => changeMonth(-1)} className="p-3 lg:p-4 bg-neutral-900/50 rounded-2xl border border-neutral-800"><ChevronLeft size={24} /></button>
+                <h2 className="text-2xl lg:text-3xl font-black uppercase tracking-widest">{currentMonthName}</h2>
+                <button onClick={() => changeMonth(1)} className="p-3 lg:p-4 bg-neutral-900/50 rounded-2xl border border-neutral-800"><ChevronRight size={24} /></button>
               </div>
             </header>
-            <Card className="bg-neutral-950 border-neutral-900 rounded-[3rem] p-12 shadow-2xl space-y-8">
-              <h3 className="text-[11px] font-bold uppercase tracking-[0.5em] text-[#d4af37]">Gastos e Entradas</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card className="bg-neutral-950 border-neutral-900 rounded-[2.5rem] lg:rounded-[3rem] p-8 lg:p-12 shadow-2xl space-y-8">
+              <h3 className="text-sm font-black uppercase tracking-[0.2em] text-[#d4af37]">Gastos e Entradas</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
                 <input type="text" placeholder="Descrição" value={newTransDesc} onChange={e => setNewTransDesc(e.target.value)} className="w-full bg-black border border-neutral-800 p-4 rounded-xl outline-none focus:border-[#d4af37]" />
                 <input type="text" placeholder="Valor R$ 0,00" value={newTransAmount} onChange={e => setNewTransAmount(formatAsCurrencyInput(e.target.value))} className="w-full bg-black border border-neutral-800 p-4 rounded-xl outline-none focus:border-[#d4af37]" />
                 <select value={newTransCategory} onChange={e => setNewTransCategory(e.target.value)} className="w-full bg-black border border-neutral-800 p-4 rounded-xl outline-none focus:border-[#d4af37]">
@@ -508,25 +521,29 @@ export const App: React.FC = () => {
                   <button onClick={() => setNewTransType('EXPENSE')} className={`flex-1 p-4 rounded-xl font-bold uppercase text-[9px] ${newTransType === 'EXPENSE' ? 'bg-rose-600 text-white' : 'bg-neutral-900 text-neutral-500'}`}>Despesa</button>
                 </div>
               </div>
-              <button onClick={handleAddManualTransaction} className="btn-modern w-full py-6 bg-gradient-to-r from-[#b8860b] to-[#d4af37] text-black rounded-2xl font-bold uppercase tracking-[0.4em] text-[11px]">Registrar Lançamento</button>
+              <button onClick={handleAddManualTransaction} className="btn-modern w-full py-6 bg-gradient-to-r from-[#b8860b] to-[#d4af37] text-black rounded-2xl font-black uppercase tracking-[0.4em] text-[11px]">Registrar Lançamento</button>
             </Card>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-               <div className="bg-neutral-950 border border-neutral-900 rounded-[3rem] p-12 shadow-3xl"><CategoryExpensesChart transactions={currentMonthTransactions} /></div>
-               <Card className="bg-neutral-950 border border-neutral-900 rounded-[3rem] p-12 shadow-3xl h-[500px] flex flex-col">
-                 <h3 className="text-[11px] font-medium uppercase tracking-[0.4em] text-white mb-8 border-b border-neutral-900 pb-4">Histórico Recente</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10">
+               <div className="bg-neutral-950 border border-neutral-900 rounded-[2.5rem] lg:rounded-[3rem] p-8 lg:p-12 shadow-3xl"><CategoryExpensesChart transactions={currentMonthTransactions} /></div>
+               <Card className="bg-neutral-950 border border-neutral-900 rounded-[2.5rem] lg:rounded-[3rem] p-8 lg:p-12 shadow-3xl h-[450px] lg:h-[500px] flex flex-col">
+                 <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-6 lg:mb-8 border-b border-neutral-900 pb-4">Histórico Recente</h3>
                  <div className="flex-1 overflow-y-auto space-y-4 no-scrollbar">
-                   {currentMonthTransactions.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(t => (
-                     <div key={t.id} className="flex items-center justify-between p-5 bg-black/40 border border-neutral-900 rounded-2xl group transition-all">
-                       <div className="flex items-center gap-4">
-                         <div className={`p-3 rounded-xl ${t.type === 'REVENUE' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>{t.type === 'REVENUE' ? <ArrowUpCircle size={20} /> : <ArrowDownCircle size={20} />}</div>
-                         <div>
-                           <p className="text-sm font-medium text-white uppercase">{t.description}</p>
-                           <p className="text-[10px] text-neutral-600 uppercase tracking-widest">{t.category} • {new Date(t.date).toLocaleDateString('pt-BR')}</p>
+                   {currentMonthTransactions.length === 0 ? (
+                     <p className="text-[10px] text-neutral-600 uppercase italic py-8">Sem lançamentos este mês.</p>
+                   ) : (
+                     currentMonthTransactions.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(t => (
+                       <div key={t.id} className="flex items-center justify-between p-4 lg:p-5 bg-black/40 border border-neutral-900 rounded-2xl group transition-all">
+                         <div className="flex items-center gap-4">
+                           <div className={`p-2 lg:p-3 rounded-xl ${t.type === 'REVENUE' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>{t.type === 'REVENUE' ? <ArrowUpCircle size={18} /> : <ArrowDownCircle size={18} />}</div>
+                           <div>
+                             <p className="text-xs lg:text-sm font-medium text-white uppercase">{t.description}</p>
+                             <p className="text-[8px] lg:text-[10px] text-neutral-600 uppercase tracking-widest">{t.category} • {new Date(t.date).toLocaleDateString('pt-BR')}</p>
+                           </div>
                          </div>
+                         <p className={`text-xs lg:text-sm font-semibold ${t.type === 'REVENUE' ? 'text-emerald-500' : 'text-rose-500'}`}>R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                        </div>
-                       <p className={`text-sm font-semibold ${t.type === 'REVENUE' ? 'text-emerald-500' : 'text-rose-500'}`}>R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                     </div>
-                   ))}
+                     ))
+                   )}
                  </div>
                </Card>
             </div>
@@ -534,89 +551,138 @@ export const App: React.FC = () => {
         )}
 
         {activeTab === 'tasks' && (
-          <div className="space-y-12 pb-24">
-             <header><h2 className="text-4xl font-bold tracking-tight uppercase">Tarefas diárias</h2></header>
-            <Card className="rounded-[3rem] p-12 bg-neutral-950 border-neutral-900 shadow-2xl">
-              <div className="flex gap-6 mb-12">
-                <input type="text" placeholder="Defina sua nova Tarefa..." className="flex-1 bg-black/50 border-b-2 border-neutral-800 p-6 text-xl outline-none focus:border-[#d4af37]" value={newTaskTitle} onChange={e => setNewTaskTitle(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddTask()} />
-                <button onClick={handleAddTask} className="p-6 bg-[#d4af37] text-black rounded-3xl"><Plus size={32} strokeWidth={3} /></button>
+          <div className="space-y-8 lg:space-y-12 pb-24">
+             <header><h2 className="text-3xl lg:text-4xl font-bold tracking-tight uppercase">Tarefas diárias</h2></header>
+            <Card className="rounded-[2.5rem] lg:rounded-[3rem] p-8 lg:p-12 bg-neutral-950 border-neutral-900 shadow-2xl">
+              <div className="flex flex-col sm:flex-row gap-4 lg:gap-6 mb-8 lg:mb-12">
+                <input type="text" placeholder="Defina sua nova Tarefa..." className="flex-1 bg-black/50 border-b-2 border-neutral-800 p-4 lg:p-6 text-lg lg:text-xl outline-none focus:border-[#d4af37]" value={newTaskTitle} onChange={e => setNewTaskTitle(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddTask()} />
+                <button onClick={handleAddTask} className="p-4 lg:p-6 bg-[#d4af37] text-black rounded-3xl self-end sm:self-auto"><Plus size={28} lg:size={32} strokeWidth={3} /></button>
               </div>
-              <div className="space-y-6">
-                {tasks.map(task => (
-                  <div key={task.id} onClick={() => toggleTask(task.id)} className={`p-8 border rounded-[2rem] flex items-center gap-8 cursor-pointer transition-all ${task.completed ? 'opacity-30' : 'border-neutral-900 hover:border-[#d4af37]/40 bg-neutral-950/50'}`}>
-                    <div className={`w-8 h-8 rounded-full border-4 flex items-center justify-center ${task.completed ? 'bg-[#d4af37] border-[#d4af37]' : 'border-neutral-800'}`}>{task.completed && <Check size={16} className="text-black" strokeWidth={3} />}</div>
-                    <span className={`text-xl uppercase flex-1 ${task.completed ? 'line-through text-neutral-600' : ''}`}>{task.emoji && <span className="mr-3">{task.emoji}</span>}{task.title}</span>
-                  </div>
-                ))}
+              <div className="space-y-4 lg:space-y-6">
+                {tasks.length === 0 ? (
+                  <p className="text-sm text-neutral-600 uppercase italic py-8 text-center border border-dashed border-neutral-900 rounded-2xl">Sua lista de tarefas está vazia.</p>
+                ) : (
+                  tasks.map(task => (
+                    <div key={task.id} onClick={() => toggleTask(task.id)} className={`p-6 lg:p-8 border rounded-[2rem] flex items-center gap-6 lg:gap-8 cursor-pointer transition-all ${task.completed ? 'opacity-30' : 'border-neutral-900 hover:border-[#d4af37]/40 bg-neutral-950/50'}`}>
+                      <div className={`w-6 h-6 lg:w-8 h-8 rounded-full border-4 flex items-center justify-center ${task.completed ? 'bg-[#d4af37] border-[#d4af37]' : 'border-neutral-800'}`}>{task.completed && <Check size={14} className="text-black" strokeWidth={3} />}</div>
+                      <span className={`text-lg lg:text-xl uppercase flex-1 ${task.completed ? 'line-through text-neutral-600' : ''}`}>{task.emoji && <span className="mr-3">{task.emoji}</span>}{task.title}</span>
+                      <button onClick={(e) => { e.stopPropagation(); setTasks(prev => prev.filter(t => t.id !== task.id)); }} className="text-neutral-800 hover:text-rose-500 transition-all"><Trash2 size={18} /></button>
+                    </div>
+                  ))
+                )}
               </div>
             </Card>
           </div>
         )}
 
         {activeTab === 'goals' && (
-           <div className="space-y-12 pb-24">
-             <header><h2 className="text-4xl font-bold tracking-tight uppercase">Metas</h2></header>
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <div className="bg-neutral-950 border border-neutral-900 rounded-[3rem] p-10 shadow-xl"><GoalProgressCard activeCount={activeGoalsCount} completedCount={completedGoalsCount} /></div>
+           <div className="space-y-8 lg:space-y-12 pb-24">
+             <header><h2 className="text-3xl lg:text-4xl font-bold tracking-tight uppercase">Metas</h2></header>
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+                <div className="bg-neutral-950 border border-neutral-900 rounded-[2.5rem] lg:rounded-[3rem] p-8 lg:p-10 shadow-xl"><GoalProgressCard activeCount={activeGoalsCount} completedCount={completedGoalsCount} /></div>
+                
                 {goals.map(goal => (
-                  <Card key={goal.id} className="relative p-10 bg-neutral-950 border-neutral-900 rounded-[3rem] group shadow-xl">
-                    <h4 className="text-xl font-semibold uppercase mb-2">{goal.emoji && <span className="mr-2">{goal.emoji}</span>}{goal.title}</h4>
-                    <p className="text-[10px] text-neutral-600 font-medium uppercase mb-8">{goal.current} / {goal.target.toLocaleString('pt-BR')} {goal.unit}</p>
-                    <div className="h-3 bg-neutral-900 rounded-full overflow-hidden mb-8 border border-neutral-800"><div className="h-full bg-[#d4af37] transition-all duration-700" style={{ width: `${(goal.current / goal.target) * 100}%` }} /></div>
-                    <button onClick={() => handleUpdateGoal(goal.id, 1)} className="w-full py-4 bg-neutral-900 text-white rounded-2xl font-bold uppercase text-[10px] border border-neutral-800">+ Incrementar</button>
+                  <Card key={goal.id} className="relative p-8 lg:p-10 bg-neutral-950 border-neutral-900 rounded-[2.5rem] lg:rounded-[3rem] group shadow-xl">
+                    <h4 className="text-lg lg:text-xl font-black uppercase mb-2">{goal.emoji && <span className="mr-2">{goal.emoji}</span>}{goal.title}</h4>
+                    <p className="text-[10px] text-neutral-400 font-black uppercase mb-6 lg:mb-8 tracking-widest">Meta: {goal.target.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                    <div className="h-3 bg-neutral-900 rounded-full overflow-hidden mb-6 lg:mb-8 border border-neutral-800">
+                      <div className="h-full bg-gradient-to-r from-[#b8860b] to-[#d4af37] transition-all duration-700" style={{ width: `${Math.min(100, (goal.current / goal.target) * 100)}%` }} />
+                    </div>
+                    <div className="flex gap-2">
+                       <button onClick={() => {
+                         const val = prompt("Qual o valor a adicionar?");
+                         if (val) handleUpdateGoal(goal.id, parseFloat(val));
+                       }} className="flex-1 py-3 lg:py-4 bg-neutral-900 text-white rounded-2xl font-black uppercase text-[10px] border border-neutral-800 hover:bg-neutral-800 transition-colors">+ Adicionar</button>
+                    </div>
                     <button onClick={() => setGoals(prev => prev.filter(g => g.id !== goal.id))} className="absolute top-6 right-6 p-2 text-neutral-800 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={16} /></button>
                   </Card>
                 ))}
-                <button onClick={handleAddGoal} className="border-2 border-dashed border-neutral-900 rounded-[3rem] p-10 flex flex-col items-center justify-center gap-4 text-neutral-800 hover:text-[#d4af37] hover:border-[#d4af37] transition-all">
-                   <Plus size={40}/><span className="text-[11px] font-medium uppercase tracking-widest">Nova Meta Estratégica</span>
-                </button>
+
+                {isAddingGoal ? (
+                  <Card className="p-8 lg:p-10 bg-neutral-900 border-[#d4af37]/40 border-2 rounded-[2.5rem] lg:rounded-[3rem] shadow-2xl animate-in zoom-in-95 duration-300">
+                    <div className="space-y-6">
+                      <h4 className="text-xs font-black uppercase tracking-widest text-[#d4af37]">Nova Meta</h4>
+                      <input 
+                        type="text" 
+                        placeholder="Título da Meta" 
+                        value={newGoalTitle} 
+                        onChange={e => setNewGoalTitle(e.target.value)}
+                        className="w-full bg-black border border-neutral-800 p-4 rounded-xl text-white outline-none focus:border-[#d4af37]"
+                        autoFocus
+                      />
+                      <input 
+                        type="text" 
+                        placeholder="Valor Alvo (R$)" 
+                        value={newGoalTarget} 
+                        onChange={e => setNewGoalTarget(formatAsCurrencyInput(e.target.value))}
+                        className="w-full bg-black border border-neutral-800 p-4 rounded-xl text-white outline-none focus:border-[#d4af37]"
+                      />
+                      <div className="flex gap-2">
+                        <button onClick={() => setIsAddingGoal(false)} className="flex-1 py-4 bg-neutral-800 text-white rounded-xl font-black uppercase text-[10px]">Cancelar</button>
+                        <button onClick={handleCreateGoal} className="flex-1 py-4 bg-[#d4af37] text-black rounded-xl font-black uppercase text-[10px]">Criar</button>
+                      </div>
+                    </div>
+                  </Card>
+                ) : (
+                  <button 
+                    onClick={() => setIsAddingGoal(true)} 
+                    className="border-2 border-dashed border-neutral-800 rounded-[2.5rem] lg:rounded-[3rem] p-8 lg:p-10 flex flex-col items-center justify-center gap-4 text-neutral-700 hover:text-[#d4af37] hover:border-[#d4af37]/60 transition-all min-h-[250px] bg-neutral-950/20 group"
+                  >
+                     <div className="p-4 rounded-full bg-neutral-900 group-hover:bg-[#d4af37]/10 transition-colors">
+                       <Plus size={36}/>
+                     </div>
+                     <span className="text-xs font-black uppercase tracking-[0.2em]">Nova Meta Estratégica</span>
+                  </button>
+                )}
              </div>
            </div>
         )}
       </main>
 
+      {/* CHAT NERO RESPONSIVO */}
       {isAiOpen && (
         <div className="fixed inset-0 lg:inset-auto lg:bottom-12 lg:right-12 lg:w-[480px] lg:h-[840px] bg-black border border-neutral-900 lg:rounded-[3.5rem] flex flex-col z-[500] shadow-[0_40px_100px_rgba(0,0,0,1)] overflow-hidden animate-in slide-in-from-bottom-12 duration-500">
-          <div className="p-10 border-b border-neutral-900 flex justify-between items-center bg-black/95 backdrop-blur-xl">
+          <div className="p-6 lg:p-10 border-b border-neutral-900 flex justify-between items-center bg-black/95 backdrop-blur-xl">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full border-2 border-[#d4af37]/50 overflow-hidden bg-neutral-900 shadow-[0_0_15px_rgba(212,175,55,0.3)]"><img src={NERO_AVATAR} alt="Nero" className="w-full h-full object-cover" /></div>
+              <div className="w-10 lg:w-12 h-10 lg:h-12 rounded-full border-2 border-[#d4af37]/50 overflow-hidden bg-neutral-900 shadow-[0_0_15px_rgba(212,175,55,0.3)]"><img src={NERO_AVATAR} alt="Nero" className="w-full h-full object-cover" /></div>
               <div>
-                <span className="uppercase text-[14px] font-bold text-[#d4af37] tracking-[0.3em] block">NERO</span>
+                <span className="uppercase text-xs lg:text-[14px] font-bold text-[#d4af37] tracking-[0.3em] block">NERO</span>
                 <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" /><span className="text-[9px] text-neutral-400 uppercase font-bold tracking-widest">Online</span></div>
               </div>
             </div>
-            <button onClick={() => setIsAiOpen(false)} className="text-neutral-600 hover:text-white transition-colors bg-neutral-900 p-3 rounded-full"><X size={20} /></button>
+            <button onClick={() => setIsAiOpen(false)} className="text-neutral-600 hover:text-white transition-colors bg-neutral-900 p-2 lg:p-3 rounded-full"><X size={20} /></button>
           </div>
-          <div className="flex-1 overflow-y-auto p-10 space-y-8 no-scrollbar" style={{ background: 'radial-gradient(circle at 50% 10%, #660000 0%, #000000 80%)' }}>
+          <div className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-6 lg:space-y-8 no-scrollbar" style={{ background: 'radial-gradient(circle at 50% 10%, #660000 0%, #000000 80%)' }}>
             {messages.length === 0 && (
-              <div className="text-center py-32 space-y-10 animate-in fade-in duration-1000">
-                <div className="w-32 h-32 mx-auto rounded-full border-4 border-[#d4af37]/20 overflow-hidden bg-neutral-900 shadow-2xl"><img src={NERO_AVATAR} alt="Nero" className="w-full h-full object-cover" /></div>
-                <p className="text-sm text-neutral-500 font-normal italic px-8 opacity-60">"Nero, registre um gasto de R$ 50 com almoço"</p>
+              <div className="text-center py-20 lg:py-32 space-y-8 lg:space-y-10 animate-in fade-in duration-1000">
+                <div className="w-24 lg:w-32 h-24 lg:h-32 mx-auto rounded-full border-4 border-[#d4af37]/20 overflow-hidden bg-neutral-900 shadow-2xl"><img src={NERO_AVATAR} alt="Nero" className="w-full h-full object-cover" /></div>
+                <p className="text-xs lg:text-sm text-neutral-500 font-normal italic px-4 lg:px-8 opacity-60">"Nero, registre um gasto de R$ 50 com almoço"</p>
               </div>
             )}
             {messages.map((m, i) => (
               <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-4 duration-300`}>
-                <div className={`max-w-[90%] p-6 rounded-[2rem] text-sm font-normal uppercase ${m.role === 'user' ? 'bg-[#d4af37] text-black shadow-lg' : 'bg-neutral-900 text-white border border-neutral-800 shadow-xl'}`}>{m.text}</div>
+                <div className={`max-w-[90%] p-4 lg:p-6 rounded-[1.5rem] lg:rounded-[2rem] text-xs lg:text-sm font-normal uppercase ${m.role === 'user' ? 'bg-[#d4af37] text-black shadow-lg' : 'bg-neutral-900 text-white border border-neutral-800 shadow-xl'}`}>{m.text}</div>
               </div>
             ))}
-            {isAiLoading && <div className="text-[#d4af37] animate-pulse text-[11px] uppercase font-medium px-8 flex items-center gap-3"><Loader2 className="animate-spin" size={16}/> Nero está processando...</div>}
+            {isAiLoading && <div className="text-[#d4af37] animate-pulse text-[11px] uppercase font-medium px-4 lg:px-8 flex items-center gap-3"><Loader2 className="animate-spin" size={16}/> Nero está processando...</div>}
           </div>
-          <div className="p-10 border-t border-neutral-900 space-y-8 bg-neutral-950/95 pb-24 lg:pb-16 backdrop-blur-xl">
-            <div className="flex gap-5 items-center">
-              <input type="text" placeholder="Comande o Nero..." value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAiChat(chatInput)} className="flex-1 bg-black border border-neutral-800 p-6 rounded-3xl text-sm outline-none focus:border-[#d4af37]" />
-              <button onMouseDown={startRecording} onMouseUp={stopRecording} className={`p-6 rounded-3xl transition-all shadow-xl ${isRecording ? 'bg-rose-700 text-white animate-pulse' : 'bg-neutral-900 text-neutral-600'}`}><Mic size={30} /></button>
-              <button onClick={() => handleAiChat(chatInput)} className="p-6 bg-[#d4af37] text-black rounded-3xl shadow-xl active:scale-90"><Send size={30} strokeWidth={3} /></button>
+          <div className="p-6 lg:p-10 border-t border-neutral-900 space-y-6 lg:space-y-8 bg-neutral-950/95 pb-32 lg:pb-16 backdrop-blur-xl">
+            <div className="flex gap-3 lg:gap-5 items-center">
+              <input type="text" placeholder="Comande o Nero..." value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAiChat(chatInput)} className="flex-1 bg-black border border-neutral-800 p-4 lg:p-6 rounded-[1.5rem] lg:rounded-3xl text-xs lg:text-sm outline-none focus:border-[#d4af37]" />
+              <button onMouseDown={startRecording} onMouseUp={stopRecording} className={`p-4 lg:p-6 rounded-[1.5rem] lg:rounded-3xl transition-all shadow-xl ${isRecording ? 'bg-rose-700 text-white animate-pulse' : 'bg-neutral-900 text-neutral-600'}`}><Mic size={24} lg:size={30} /></button>
+              <button onClick={() => handleAiChat(chatInput)} className="p-4 lg:p-6 bg-[#d4af37] text-black rounded-[1.5rem] lg:rounded-3xl shadow-xl active:scale-90"><Send size={24} lg:size={30} strokeWidth={3} /></button>
             </div>
           </div>
         </div>
       )}
 
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-24 bg-black/95 backdrop-blur-3xl border-t border-neutral-900 flex items-center justify-around px-6 pb-6 z-[400] shadow-[0_-15px_40px_rgba(0,0,0,0.9)]">
-        <button onClick={() => setActiveTab('dashboard')} className={`p-4 rounded-full transition-all ${activeTab === 'dashboard' ? 'bg-[#d4af37] text-black shadow-lg' : 'text-neutral-700'}`}><LayoutDashboard size={26} /></button>
-        <button onClick={() => setActiveTab('finances')} className={`p-4 rounded-full transition-all ${activeTab === 'finances' ? 'bg-[#d4af37] text-black shadow-lg' : 'text-neutral-700'}`}><Wallet size={26} /></button>
-        <button onClick={() => setIsAiOpen(true)} className={`p-5 rounded-full transition-all border-2 border-[#d4af37]/20 ${isAiOpen ? 'bg-[#d4af37] text-black shadow-[0_0_20px_rgba(212,175,55,0.4)]' : 'bg-neutral-900 text-[#d4af37]'}`}><Bot size={30} /></button>
-        <button onClick={() => setActiveTab('tasks')} className={`p-4 rounded-full transition-all ${activeTab === 'tasks' ? 'bg-[#d4af37] text-black shadow-lg' : 'text-neutral-700'}`}><CheckSquare size={26} /></button>
-        <button onClick={() => setActiveTab('goals')} className={`p-4 rounded-full transition-all ${activeTab === 'goals' ? 'bg-[#d4af37] text-black shadow-lg' : 'text-neutral-700'}`}><Flag size={26} /></button>
+      {/* NAVBAR MOBILE */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-20 bg-black/95 backdrop-blur-3xl border-t border-neutral-900 flex items-center justify-around px-4 pb-4 z-[400] shadow-[0_-15px_40px_rgba(0,0,0,0.9)]">
+        <button onClick={() => setActiveTab('dashboard')} className={`p-3 rounded-full transition-all ${activeTab === 'dashboard' ? 'bg-[#d4af37] text-black shadow-lg' : 'text-neutral-700'}`}><LayoutDashboard size={22} /></button>
+        <button onClick={() => setActiveTab('finances')} className={`p-3 rounded-full transition-all ${activeTab === 'finances' ? 'bg-[#d4af37] text-black shadow-lg' : 'text-neutral-700'}`}><Wallet size={22} /></button>
+        <button onClick={() => setIsAiOpen(true)} className={`p-4 rounded-full transition-all border-2 border-[#d4af37]/20 ${isAiOpen ? 'bg-[#d4af37] text-black shadow-[0_0_20px_rgba(212,175,55,0.4)]' : 'bg-neutral-900 text-[#d4af37]'}`}><Bot size={26} /></button>
+        <button onClick={() => setActiveTab('tasks')} className={`p-3 rounded-full transition-all ${activeTab === 'tasks' ? 'bg-[#d4af37] text-black shadow-lg' : 'text-neutral-700'}`}><CheckSquare size={22} /></button>
+        <button onClick={() => setActiveTab('goals')} className={`p-3 rounded-full transition-all ${activeTab === 'goals' ? 'bg-[#d4af37] text-black shadow-lg' : 'text-neutral-700'}`}><Flag size={22} /></button>
       </nav>
     </div>
   );
