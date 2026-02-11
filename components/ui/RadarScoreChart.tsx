@@ -102,10 +102,11 @@ export const RadarScoreChart: React.FC<RadarScoreChartProps> = ({ data, size = 3
               x={x}
               y={y}
               fill="#ff0000"
-              fontSize={size * 0.03} // Dynamic font size
-              fontWeight="900"
+              fontSize={size * 0.03} 
+              fontWeight="600"
               textAnchor="middle"
               className="uppercase tracking-widest opacity-80"
+              style={{ fontFamily: 'var(--font-main)' }}
             >
               {d.label}
             </text>
@@ -115,8 +116,8 @@ export const RadarScoreChart: React.FC<RadarScoreChartProps> = ({ data, size = 3
 
       {/* Central Score */}
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-        <span className="text-3xl sm:text-5xl font-black text-white tracking-tighter leading-none">{averageScore}</span>
-        <span className="text-[8px] sm:text-[10px] font-black text-neutral-500 uppercase tracking-[0.3em] mt-1">Score</span>
+        <span className="text-3xl sm:text-5xl font-bold text-white tracking-tighter leading-none">{averageScore}</span>
+        <span className="text-[8px] sm:text-[10px] font-medium text-neutral-500 uppercase tracking-[0.3em] mt-1">Score</span>
       </div>
     </div>
   );

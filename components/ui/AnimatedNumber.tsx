@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 
 interface AnimatedNumberProps {
@@ -7,7 +6,7 @@ interface AnimatedNumberProps {
   prefix?: string;
 }
 
-export const AnimatedNumber: React.FC<AnimatedNumberProps> = ({ value, duration = 500, prefix = '' }) => {
+export const AnimatedNumber: React.FC<AnimatedNumberProps> = ({ value, duration = 800, prefix = '' }) => {
   const [displayValue, setDisplayValue] = useState(value);
 
   useEffect(() => {
@@ -18,8 +17,13 @@ export const AnimatedNumber: React.FC<AnimatedNumberProps> = ({ value, duration 
     const step = (timestamp: number) => {
       if (!startTimestamp) startTimestamp = timestamp;
       const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-      const current = Math.floor(progress * (endValue - startValue) + startValue);
+      
+      // Easing function (outExpo)
+      const ease = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+      
+      const current = ease * (endValue - startValue) + startValue;
       setDisplayValue(current);
+      
       if (progress < 1) {
         window.requestAnimationFrame(step);
       }
@@ -30,7 +34,10 @@ export const AnimatedNumber: React.FC<AnimatedNumberProps> = ({ value, duration 
 
   return (
     <span>
-      {prefix}{displayValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+      {prefix}{displayValue.toLocaleString('pt-BR', { 
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 2 
+      })}
     </span>
   );
 };

@@ -13,11 +13,14 @@
     </script>
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Fonte Sans-serif Moderna: Inter (O padrão ouro para interfaces SaaS modernas) -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Fonte Inter: Hierarquia 400, 500, 600, 700 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
     <style>
         :root {
-            --font-main: 'Inter', sans-serif;
+            --font-main: 'Inter', system-ui, -apple-system, sans-serif;
         }
         body {
             font-family: var(--font-main);
@@ -28,6 +31,7 @@
             overflow-x: hidden;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
+            line-height: 1.5;
         }
         #root {
             min-height: 100vh;
@@ -40,28 +44,22 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        .text-modern-bold {
-            font-weight: 800;
-            letter-spacing: -0.03em;
-        }
-
-        /* Estilo chique moderno - Sem serifa, focado em pesos e espaçamento */
+        /* Estilo chique moderno ajustado para a nova hierarquia */
         .text-chique {
-          font-weight: 900;
-          letter-spacing: -0.05em;
+          font-weight: 700;
+          letter-spacing: -0.02em;
           text-transform: uppercase;
         }
 
         .text-header-lux {
-          font-weight: 800;
-          letter-spacing: 0.2em;
+          font-weight: 600;
+          letter-spacing: 0.1em;
           text-transform: uppercase;
         }
 
         /* Input styling para sans-serif moderna */
         input, select, button {
             font-family: var(--font-main);
-            font-weight: 700;
         }
 
         .fade-in-premium {
@@ -72,7 +70,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Botões com estilo moderno */
         .btn-modern {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }

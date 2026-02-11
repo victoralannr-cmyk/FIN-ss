@@ -1,53 +1,30 @@
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
-  Activity, 
-  Sparkles, 
-  Send, 
   Plus, 
-  ArrowUpRight, 
-  ArrowDownLeft, 
   LayoutDashboard, 
   Wallet, 
   CheckSquare, 
-  Trophy, 
-  Target as TargetIcon, 
   Bot, 
-  Edit2, 
   Check, 
   Trash2, 
   Mic, 
-  MicOff, 
-  History, 
-  PieChart, 
-  MessageSquare, 
-  TrendingUp, 
-  TrendingDown, 
   X, 
-  ShieldCheck, 
-  ChevronRight, 
-  ClipboardList, 
-  Flame, 
   Zap, 
   Flag, 
-  BarChart3, 
   Loader2,
-  Calendar,
-  AlertCircle,
   ChevronLeft,
-  CircleDollarSign,
+  ChevronRight,
   ArrowDownCircle,
   ArrowUpCircle,
   Pencil,
-  Filter,
-  Save
+  Save,
+  Sparkles,
+  Send
 } from 'lucide-react';
 import { Card } from './components/ui/Card';
 import { AnimatedNumber } from './components/ui/AnimatedNumber';
 import { RadarScoreChart } from './components/ui/RadarScoreChart';
-import { WeeklyTaskChart } from './components/ui/WeeklyTaskChart';
 import { GoalProgressCard } from './components/ui/GoalProgressCard';
-import { WeeklyExpensesChart } from './components/ui/WeeklyExpensesChart';
 import { CategoryExpensesChart } from './components/ui/CategoryExpensesChart';
 import { 
   Priority, 
@@ -57,10 +34,9 @@ import {
   UserStats 
 } from './types';
 import { 
-  XP_REQUIREMENTS,
   CATEGORIES
 } from './constants';
-import { processAICmd, classifyCategory } from './services/geminiService';
+import { processAICmd } from './services/geminiService';
 import confetti from 'canvas-confetti';
 
 interface ChatMessage {
@@ -77,13 +53,16 @@ interface Goal {
   completed: boolean;
 }
 
+// Avatar do Nero (Pet Corvo Imperial) - Atualizado com a nova imagem majestosa enviada pelo usuário
+const NERO_AVATAR = "https://raw.githubusercontent.com/StackBlitz/stackblitz-images/main/raven-nero-new.png"; 
+
 const VWalletLogo = ({ className = "w-12 h-12" }: { className?: string }) => (
   <div className={`relative ${className} flex items-center justify-center`}>
     <div className="relative transform hover:scale-105 transition-transform duration-700">
       <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_15px_rgba(212,175,55,0.4)]">
         <path d="M20,30 Q35,85 50,85 Q65,85 80,30" fill="none" stroke="url(#v-gradient)" strokeWidth="14" strokeLinecap="round" />
         <circle cx="50" cy="35" r="22" fill="url(#coin-gradient)" />
-        <text x="50" y="44" textAnchor="middle" fill="#2a1a00" fontSize="24" fontWeight="900" style={{ fontFamily: 'sans-serif' }}>$</text>
+        <text x="50" y="44" textAnchor="middle" fill="#2a1a00" fontSize="24" fontWeight="700" style={{ fontFamily: 'var(--font-main)' }}>$</text>
         <defs>
           <linearGradient id="v-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="#d4af37" />
@@ -101,7 +80,6 @@ const VWalletLogo = ({ className = "w-12 h-12" }: { className?: string }) => (
 );
 
 export const App: React.FC = () => {
-  // --- TODA A DEFINIÇÃO DE HOOKS NO TOPO (Evita erro #310) ---
   const [isLoaded, setIsLoaded] = useState(false);
   const [isOnboarding, setIsOnboarding] = useState(true);
   const [userName, setUserName] = useState('');
@@ -114,37 +92,40 @@ export const App: React.FC = () => {
   
   const [viewDate, setViewDate] = useState(new Date());
   const [monthlyLimit, setMonthlyLimit] = useState(5000); 
-  const [initialReserve, setInitialReserve] = useState(38338); 
+  const [initialReserve, setInitialReserve] = useState(0); 
 
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [chatInput, setChatInput] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
-  const [micPermissionGranted, setMicPermissionGranted] = useState(false);
-  const [showMicPrompt, setShowMicPrompt] = useState(false);
   
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
-  const recognitionRef = useRef<any>(null);
-  const transcriptRef = useRef<string>('');
 
   const [isEditingBalance, setIsEditingBalance] = useState(false);
   const [tempBalance, setTempBalance] = useState('');
 
-  const [newGoalTitle, setNewGoalTitle] = useState('');
-  const [newGoalTarget, setNewGoalTarget] = useState('');
-  const [newGoalUnit, setNewGoalUnit] = useState('');
-
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTransDesc, setNewTransDesc] = useState('');
   const [newTransAmount, setNewTransAmount] = useState('');
-  const [newTransType, setNewTransType] = useState<'REVENUE' | 'EXPENSE'>('REVENUE');
+  const [newTransType, setNewTransType] = useState<'REVENUE' | 'EXPENSE'>('EXPENSE');
   const [newTransCategory, setNewTransCategory] = useState('Outros');
-  const [isClassifying, setIsClassifying] = useState(false);
-  const [suggestedCategory, setSuggestedCategory] = useState('Outros');
 
-  // Memoized calculations
+  // Máscara de Moeda Financeira (ex: 1.234,56)
+  const formatAsCurrencyInput = (value: string) => {
+    let digits = value.replace(/\D/g, "");
+    if (!digits) return "";
+    let amount = parseInt(digits) / 100;
+    return amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  const parseCurrencyToNumber = (formatted: string) => {
+    if (!formatted) return 0;
+    return parseFloat(formatted.replace(/\./g, "").replace(",", "."));
+  };
+
+  // Cálculos Memoizados
   const currentMonthTransactions = useMemo((): Transaction[] => {
     const month = viewDate.getMonth();
     const year = viewDate.getFullYear();
@@ -155,79 +136,30 @@ export const App: React.FC = () => {
   }, [transactions, viewDate]);
 
   const monthlyStats = useMemo(() => {
-    let revenueSum: number = 0;
-    let expensesSum: number = 0;
-    currentMonthTransactions.forEach((t: Transaction) => {
+    let revenueSum = 0;
+    let expensesSum = 0;
+    currentMonthTransactions.forEach((t) => {
       const amt = Number(t.amount) || 0;
       if (t.type === 'REVENUE') revenueSum += amt;
       else expensesSum += amt;
     });
-    const balanceValue: number = revenueSum - expensesSum;
-    const economyRateValue: number = revenueSum > 0 ? (balanceValue / revenueSum) * 100 : 0;
-    const limit: number = Number(monthlyLimit) || 0;
-    const budgetPercentageValue: number = limit > 0 ? Math.min(100, Math.round((expensesSum / limit) * 100)) : 0;
-    
     return { 
       revenue: revenueSum, 
       expenses: expensesSum, 
-      balance: balanceValue, 
-      economyRate: economyRateValue, 
-      budgetPercentage: budgetPercentageValue 
+      balance: revenueSum - expensesSum 
     };
-  }, [currentMonthTransactions, monthlyLimit]);
+  }, [currentMonthTransactions]);
+
+  const totalEquity = useMemo(() => initialReserve + monthlyStats.balance, [initialReserve, monthlyStats.balance]);
 
   const currentMonthName = useMemo(() => {
     return new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(viewDate);
   }, [viewDate]);
 
-  const activeItemsCount = useMemo(() => tasks.filter(t => !t.completed).length, [tasks]);
-
-  const mostDone = useMemo(() => {
-    const completedTasks = tasks.filter(t => t.completed);
-    if (completedTasks.length === 0) return { title: 'Nenhuma', count: 0 };
-    const counts: Record<string, number> = {};
-    completedTasks.forEach(t => {
-      counts[t.title] = (counts[t.title] || 0) + 1;
-    });
-    let maxTitle = '';
-    let maxCount = 0;
-    Object.keys(counts).forEach(title => {
-      const count = counts[title];
-      if (count > maxCount) {
-        maxCount = count;
-        maxTitle = title;
-      }
-    });
-    return { title: maxTitle, count: maxCount };
-  }, [tasks]);
-
   const completedCount = useMemo(() => tasks.filter(t => t.completed).length, [tasks]);
   const totalCount = useMemo(() => tasks.length, [tasks]);
   const completedGoalsCount = useMemo(() => goals.filter(g => g.completed).length, [goals]);
   const activeGoalsCount = useMemo(() => goals.filter(g => !g.completed).length, [goals]);
-
-  // Effects
-  useEffect(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitRecognition;
-    if (SpeechRecognition) {
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = true;
-      recognitionRef.current.interimResults = true;
-      recognitionRef.current.lang = 'pt-BR';
-
-      recognitionRef.current.onresult = (event: any) => {
-        let interimTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            transcriptRef.current += event.results[i][0].transcript;
-          } else {
-            interimTranscript += event.results[i][0].transcript;
-          }
-        }
-        setChatInput(transcriptRef.current + interimTranscript);
-      };
-    }
-  }, []);
 
   useEffect(() => {
     const savedName = localStorage.getItem('nexus_user_name');
@@ -244,10 +176,10 @@ export const App: React.FC = () => {
     if (savedName) {
       setUserName(savedName);
       setIsOnboarding(false);
-      if (savedStats) setStats(JSON.parse(savedStats) as UserStats);
-      if (savedTasks) setTasks(JSON.parse(savedTasks) as Task[]);
-      if (savedTransactions) setTransactions(JSON.parse(savedTransactions) as Transaction[]);
-      if (savedGoals) setGoals(JSON.parse(savedGoals) as Goal[]);
+      if (savedStats) setStats(JSON.parse(savedStats));
+      if (savedTasks) setTasks(JSON.parse(savedTasks));
+      if (savedTransactions) setTransactions(JSON.parse(savedTransactions));
+      if (savedGoals) setGoals(JSON.parse(savedGoals));
     }
     setIsLoaded(true);
   }, []);
@@ -264,47 +196,25 @@ export const App: React.FC = () => {
     }
   }, [stats, tasks, transactions, goals, monthlyLimit, initialReserve, isOnboarding, isLoaded, userName]);
 
-  // Handlers
-  const handleAiChat = async (text: string, audioBase64?: string) => {
-    if (!text && !audioBase64) return;
-    setIsAiLoading(true);
-    const displayMessage = text || "🎤 Enviando comando de áudio...";
-    setMessages(prev => [...prev, { role: 'user', text: displayMessage }]);
-    const result = await processAICmd(text, audioBase64);
-    if (result.functionCalls) executeAiFunctions(result.functionCalls);
-    setMessages(prev => [...prev, { role: 'ai', text: result.text || "Operação concluída pelo Nero." }]);
-    setIsAiLoading(false);
-    setChatInput('');
+  const changeMonth = (offset: number) => {
+    setViewDate(prev => {
+      const newDate = new Date(prev);
+      newDate.setMonth(newDate.getMonth() + offset);
+      return newDate;
+    });
   };
 
-  const executeAiFunctions = (calls: any[]) => {
-    calls.forEach(call => {
-      const { name, args } = call;
-      if (name === 'add_transaction') {
-        const val = args.type === 'REVENUE' ? Number(args.amount) : -Number(args.amount);
-        handleAdjustBalance(val, args.description, args.category || 'Outros');
-      } else if (name === 'update_balance') {
-        setStats(prev => ({ ...prev, balance: Number(args.amount) }));
-        triggerFireworks('#ffae00');
-      } else if (name === 'add_task') {
-        const newTask: Task = {
-          id: Math.random().toString(36).substr(2, 9),
-          title: args.title,
-          priority: Priority.MEDIUM,
-          completed: false,
-          xpValue: 20
-        };
-        setTasks(prev => [newTask, ...prev]);
-      }
-    });
+  const triggerFireworks = (color = '#ffae00') => {
+    confetti({ particleCount: 40, spread: 70, origin: { y: 0.6 }, colors: [color] });
   };
 
   const handleAdjustBalance = (amount: number, description: string, category: string) => {
     const isPositive = amount > 0;
+    const absAmount = Math.abs(amount);
     const newTransaction: Transaction = {
       id: Math.random().toString(36).substr(2, 9),
       type: isPositive ? 'REVENUE' : 'EXPENSE',
-      amount: Math.abs(amount),
+      amount: absAmount,
       category: category,
       date: new Date().toISOString().split('T')[0],
       description: description,
@@ -313,18 +223,36 @@ export const App: React.FC = () => {
     setStats(prev => ({
       ...prev,
       balance: prev.balance + amount,
-      totalRevenue: isPositive ? prev.totalRevenue + amount : prev.totalRevenue,
-      totalExpenses: !isPositive ? prev.totalExpenses + Math.abs(amount) : prev.totalExpenses,
     }));
   };
 
-  const handleManualBalanceUpdate = () => {
-    const newVal = parseFloat(tempBalance.replace(',', '.'));
+  const handleAddManualTransaction = () => {
+    if (!newTransDesc || !newTransAmount) return;
+    const amountValue = parseCurrencyToNumber(newTransAmount);
+    if (isNaN(amountValue)) return;
+
+    handleAdjustBalance(
+      newTransType === 'REVENUE' ? amountValue : -amountValue,
+      newTransDesc,
+      newTransCategory
+    );
+
+    setNewTransDesc('');
+    setNewTransAmount('');
+    triggerFireworks(newTransType === 'REVENUE' ? '#10b981' : '#f43f5e');
+  };
+
+  const handleUpdateTotalBalance = () => {
+    const newVal = parseCurrencyToNumber(tempBalance);
     if (!isNaN(newVal)) {
-      setStats(prev => ({ ...prev, balance: newVal }));
-      triggerFireworks('#ffae00');
+      setInitialReserve(newVal - monthlyStats.balance);
+      triggerFireworks('#d4af37');
       setIsEditingBalance(false);
     }
+  };
+
+  const handleDeleteTransaction = (id: string) => {
+    setTransactions(prev => prev.filter(item => item.id !== id));
   };
 
   const toggleTask = (id: string) => {
@@ -353,45 +281,26 @@ export const App: React.FC = () => {
     }));
   };
 
-  const handleAddManualTransaction = () => {
-    if (!newTransDesc || !newTransAmount) return;
-    const amount = parseFloat(newTransAmount.replace(',', '.'));
-    if (isNaN(amount)) return;
-
-    handleAdjustBalance(
-      newTransType === 'REVENUE' ? amount : -amount,
-      newTransDesc,
-      newTransCategory
-    );
-
-    setNewTransDesc('');
-    setNewTransAmount('');
-    triggerFireworks(newTransType === 'REVENUE' ? '#10b981' : '#f43f5e');
-  };
-
-  const triggerFireworks = (color = '#ffae00') => {
-    confetti({ particleCount: 40, spread: 70, origin: { y: 0.6 }, colors: [color] });
-  };
-
-  const handleStartSession = () => {
-    if (!userName.trim()) {
-      setOnboardingError('Identificação mandatória.');
-      return;
+  const handleAiChat = async (text: string, audioBase64?: string) => {
+    if (!text && !audioBase64) return;
+    setIsAiLoading(true);
+    if (text) setMessages(prev => [...prev, { role: 'user', text }]);
+    const result = await processAICmd(text, audioBase64);
+    if (result.functionCalls) {
+      result.functionCalls.forEach((call: any) => {
+        if (call.name === 'add_transaction') {
+          const val = call.args.type === 'REVENUE' ? Number(call.args.amount) : -Number(call.args.amount);
+          handleAdjustBalance(val, call.args.description, call.args.category || 'Outros');
+        }
+      });
     }
-    setOnboardingError('');
-    setIsOnboarding(false);
-  };
-
-  const changeMonth = (offset: number) => {
-    const newDate = new Date(viewDate);
-    newDate.setMonth(newDate.getMonth() + offset);
-    setViewDate(newDate);
+    setMessages(prev => [...prev, { role: 'ai', text: result.text || "Operação concluída pelo Nero." }]);
+    setIsAiLoading(false);
+    setChatInput('');
   };
 
   const startRecording = async () => {
     try {
-      transcriptRef.current = ''; setChatInput('');
-      if (recognitionRef.current) recognitionRef.current.start();
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorder.current = new MediaRecorder(stream);
       audioChunks.current = [];
@@ -400,71 +309,49 @@ export const App: React.FC = () => {
         const audioBlob = new Blob(audioChunks.current, { type: 'audio/webm' });
         const reader = new FileReader();
         reader.readAsDataURL(audioBlob);
-        reader.onloadend = () => {
-          const base64 = (reader.result as string).split(',')[1];
-          handleAiChat(transcriptRef.current || chatInput, base64);
+        reader.onloadend = async () => {
+          const base64Audio = (reader.result as string).split(',')[1];
+          handleAiChat("Comando de áudio registrado.", base64Audio); 
         };
       };
       mediaRecorder.current.start();
       setIsRecording(true);
-    } catch (err) { console.error("Mic error:", err); }
+    } catch (err) { console.error(err); }
   };
 
   const stopRecording = () => {
     if (mediaRecorder.current && isRecording) {
-      if (recognitionRef.current) recognitionRef.current.stop();
       mediaRecorder.current.stop();
       setIsRecording(false);
-      mediaRecorder.current.stream.getTracks().forEach(track => track.stop());
     }
   };
 
-  const handleDeleteTransaction = (id: string) => {
-    const t = transactions.find(t => t.id === id);
-    if (!t) return;
-    const amountAdjustment = t.type === 'REVENUE' ? -t.amount : t.amount;
-    setTransactions(prev => prev.filter(item => item.id !== id));
-    setStats(prev => ({
-      ...prev,
-      balance: prev.balance + amountAdjustment,
-      totalRevenue: t.type === 'REVENUE' ? prev.totalRevenue - t.amount : prev.totalRevenue,
-      totalExpenses: t.type === 'EXPENSE' ? prev.totalExpenses - t.amount : prev.totalExpenses,
-    }));
-  };
-
-  // --- EARLY RETURNS ---
   if (!isLoaded) return null;
 
   if (isOnboarding) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-black text-white">
-        <Card className="w-full max-w-md bg-neutral-900 border-neutral-800 p-12 space-y-12 backdrop-blur-3xl shadow-3xl rounded-[2.5rem] border-opacity-50">
+        <Card className="w-full max-w-md bg-neutral-900 border-neutral-800 p-12 space-y-12 rounded-[2.5rem]">
           <div className="text-center space-y-6">
             <VWalletLogo className="w-24 h-24 mx-auto mb-2" />
-            <h1 className="text-5xl text-chique tracking-tighter uppercase font-black text-white">VWallet</h1>
-            <p className="text-neutral-500 text-[10px] uppercase tracking-[0.5em] font-black opacity-60">Sincronização de Ativos</p>
+            <h1 className="text-4xl text-chique font-bold">VWallet</h1>
           </div>
           <div className="space-y-8">
-            <div className="space-y-3">
-              <label className="text-[10px] text-neutral-600 uppercase font-black tracking-[0.3em] block text-center">Identificação do Titular</label>
-              <input 
-                type="text" 
-                placeholder="Insira seu nome" 
-                value={userName} 
-                onChange={e => { setUserName(e.target.value); if (e.target.value.trim()) setOnboardingError(''); }}
-                onKeyDown={e => e.key === 'Enter' && handleStartSession()}
-                className={`w-full bg-black border-b-2 ${onboardingError ? 'border-red-600' : 'border-neutral-800'} focus:border-[#d4af37] p-4 text-xl font-black text-center transition-all outline-none`}
-              />
-            </div>
-            {onboardingError && (
-              <p className="text-[10px] text-red-500 uppercase tracking-widest text-center animate-pulse flex items-center justify-center gap-1 font-black">
-                <AlertCircle size={12} /> {onboardingError}
-              </p>
-            )}
+            <input 
+              type="text" 
+              placeholder="Identifique-se" 
+              value={userName} 
+              onChange={e => setUserName(e.target.value)}
+              className="w-full bg-black border-b-2 border-neutral-800 focus:border-[#d4af37] p-4 text-xl font-medium text-center outline-none"
+            />
+            {onboardingError && <p className="text-red-500 text-center font-medium">{onboardingError}</p>}
           </div>
           <button 
-            onClick={handleStartSession}
-            className="btn-modern w-full py-6 bg-gradient-to-r from-[#b8860b] to-[#d4af37] text-black uppercase tracking-[0.5em] text-[11px] font-black rounded-full shadow-2xl"
+            onClick={() => {
+              if (!userName.trim()) return setOnboardingError('Identificação mandatória.');
+              setIsOnboarding(false);
+            }}
+            className="btn-modern w-full py-6 bg-gradient-to-r from-[#b8860b] to-[#d4af37] text-black font-bold rounded-full shadow-2xl uppercase tracking-wider"
           >
             Acessar Sistema
           </button>
@@ -474,12 +361,11 @@ export const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col lg:flex-row font-sans overflow-hidden selection:bg-[#d4af37] selection:text-black">
-      {/* Sidebar - Desktop */}
-      <aside className="hidden lg:flex flex-col w-72 border-r border-neutral-900 p-10 bg-black/80 backdrop-blur-2xl shrink-0">
+    <div className="min-h-screen bg-black text-white flex flex-col lg:flex-row font-sans overflow-hidden">
+      <aside className="hidden lg:flex flex-col w-72 border-r border-neutral-900 p-10 bg-black/80 backdrop-blur-2xl">
         <div className="flex flex-col items-center gap-6 mb-16">
           <VWalletLogo className="w-16 h-16" />
-          <span className="text-2xl text-chique tracking-tighter uppercase font-black text-white">VWallet</span>
+          <span className="text-xl text-chique font-bold">VWallet</span>
         </div>
         <nav className="space-y-3 flex-1">
           {[
@@ -491,99 +377,113 @@ export const App: React.FC = () => {
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center gap-5 px-8 py-5 rounded-2xl uppercase text-[10px] tracking-[0.25em] font-black transition-all ${
-                activeTab === item.id ? 'bg-[#d4af37] text-black shadow-xl' : 'text-neutral-500 hover:text-white hover:bg-neutral-900/50'
+              className={`w-full flex items-center gap-5 px-8 py-5 rounded-2xl uppercase text-[10px] tracking-[0.25em] font-bold transition-all ${
+                activeTab === item.id ? 'bg-[#d4af37] text-black shadow-xl' : 'text-neutral-500 hover:text-white'
               }`}
             >
               <item.icon size={16} />
               {item.label}
             </button>
           ))}
+          {/* Botão Nero Sempre Visível no Desktop */}
+          <button
+            onClick={() => setIsAiOpen(true)}
+            className={`w-full flex items-center gap-5 px-8 py-5 rounded-2xl uppercase text-[10px] tracking-[0.25em] font-bold transition-all mt-10 border border-[#d4af37]/20 ${
+              isAiOpen ? 'bg-[#d4af37] text-black' : 'text-[#d4af37] hover:bg-[#d4af37]/10'
+            }`}
+          >
+            <Bot size={16} />
+            Chat Nero
+          </button>
         </nav>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 p-6 sm:p-12 max-w-7xl mx-auto w-full pb-32 lg:pb-12 overflow-y-auto h-screen no-scrollbar relative">
         {activeTab === 'dashboard' && (
-          <div className="space-y-16 animate-in fade-in duration-1000">
-            <header className="flex flex-col sm:flex-row justify-between items-start gap-8">
+          <div className="space-y-12 animate-in fade-in duration-1000">
+            <header className="flex justify-between items-start gap-8">
               <div className="space-y-4">
-                <h2 className="text-4xl lg:text-7xl text-modern-bold tracking-tight font-black">Olá, <span className="text-[#d4af37] uppercase">{userName}</span></h2>
-                <p className="text-[10px] text-neutral-600 uppercase tracking-[0.6em] font-black">
-                  Sincronização: {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                <h2 className="text-4xl lg:text-6xl font-bold tracking-tight">Olá, <span className="text-[#d4af37] uppercase">{userName}</span></h2>
+                <p className="text-[10px] text-neutral-600 uppercase tracking-[0.6em] font-medium">
+                  {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
                 </p>
               </div>
-              <button 
-                onClick={() => setIsAiOpen(true)}
-                className="btn-modern flex items-center gap-4 px-10 py-6 bg-neutral-900 border border-[#d4af37]/20 text-white rounded-full font-black uppercase text-[11px] tracking-[0.35em] shadow-2xl"
-              >
-                <Bot size={20} /> Falar com Nero
+              <button onClick={() => setIsAiOpen(true)} className="btn-modern p-6 bg-neutral-900 border border-[#d4af37]/20 text-white rounded-full font-bold uppercase text-[11px] tracking-[0.35em] shadow-xl">
+                <Bot size={24} />
               </button>
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-              <Card className="relative overflow-hidden group border-neutral-900 hover:border-[#d4af37]/30 transition-all p-12 bg-neutral-950/40 shadow-2xl rounded-[2.5rem]">
-                <Wallet className="absolute -right-12 -top-12 opacity-5 group-hover:opacity-10 transition-opacity rotate-12" size={160} />
-                <h4 className="text-[11px] text-neutral-600 uppercase tracking-[0.5em] mb-6 font-black">Capital Disponível</h4>
+              <Card className="relative overflow-hidden p-12 bg-neutral-950 border-neutral-900 shadow-2xl group rounded-[2.5rem]">
+                <Wallet className="absolute -right-8 -top-8 text-neutral-800 opacity-20 rotate-12" size={120} />
+                <h4 className="text-[11px] text-neutral-600 uppercase tracking-[0.5em] mb-6 font-medium">Balanço Patrimonial Total</h4>
                 <div className="flex items-center gap-5">
-                  {isEditingBalance ? (
-                    <div className="flex items-center gap-2">
-                      <input 
-                        type="text" 
-                        value={tempBalance}
-                        onChange={e => setTempBalance(e.target.value)}
-                        className="bg-black border-b-2 border-[#d4af37] text-4xl font-black w-48 outline-none"
-                        autoFocus
-                      />
-                      <button onClick={handleManualBalanceUpdate} className="p-3 bg-[#d4af37] text-black rounded-full"><Save size={18}/></button>
-                      <button onClick={() => setIsEditingBalance(false)} className="p-3 bg-neutral-800 text-white rounded-full"><X size={18}/></button>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="text-6xl text-modern-bold tracking-tighter font-black">R$ <AnimatedNumber value={stats.balance} /></div>
-                      <button onClick={() => { setTempBalance(stats.balance.toString()); setIsEditingBalance(true); }} className="p-4 text-neutral-700 hover:text-[#d4af37] transition-colors bg-neutral-900/50 rounded-full border border-neutral-800"><Edit2 size={18} /></button>
-                    </>
-                  )}
+                   {isEditingBalance ? (
+                     <div className="flex items-center gap-2">
+                       <input 
+                         type="text" 
+                         value={tempBalance}
+                         onChange={e => setTempBalance(formatAsCurrencyInput(e.target.value))}
+                         className="bg-black border-b-2 border-[#d4af37] text-3xl font-semibold w-56 outline-none"
+                         autoFocus
+                         onKeyDown={e => e.key === 'Enter' && handleUpdateTotalBalance()}
+                       />
+                       <button onClick={handleUpdateTotalBalance} className="p-3 bg-[#d4af37] text-black rounded-full"><Save size={18}/></button>
+                     </div>
+                   ) : (
+                     <>
+                       <div className="text-5xl font-bold tracking-tighter">R$ <AnimatedNumber value={totalEquity} /></div>
+                       <button onClick={() => { setTempBalance(totalEquity.toLocaleString('pt-BR', { minimumFractionDigits: 2 })); setIsEditingBalance(true); }} className="p-4 bg-neutral-900 rounded-full hover:text-[#d4af37] transition-colors"><Pencil size={18} /></button>
+                     </>
+                   )}
                 </div>
               </Card>
 
-              <Card className="p-12 bg-neutral-950/40 shadow-2xl rounded-[2.5rem] border-neutral-900">
-                <h4 className="text-[11px] text-neutral-600 uppercase tracking-[0.5em] mb-6 font-black">Performance Nero</h4>
-                <div className="text-6xl text-modern-bold tracking-tighter font-black">
-                  {stats.xp} <span className="text-sm text-neutral-600 uppercase tracking-widest ml-2 font-black">XP</span>
-                </div>
-                <div className="mt-8 h-2 bg-neutral-900 rounded-full overflow-hidden border border-neutral-800 shadow-inner">
+              <Card className="p-12 bg-neutral-950 border-neutral-900 shadow-2xl rounded-[2.5rem]">
+                <h4 className="text-[11px] text-neutral-600 uppercase tracking-[0.5em] mb-6 font-medium">Performance Nero</h4>
+                <div className="text-5xl font-bold">{stats.xp} <span className="text-sm font-normal">XP</span></div>
+                <div className="mt-8 h-2 bg-neutral-900 rounded-full overflow-hidden border border-neutral-800">
                   <div className="h-full bg-gradient-to-r from-[#b8860b] to-[#d4af37] transition-all duration-1000" style={{ width: `${(stats.xp % 2000) / 20}%` }} />
                 </div>
               </Card>
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-neutral-950 border border-emerald-900/20 rounded-[2rem] p-8 shadow-xl">
+                 <p className="text-[10px] text-emerald-500/60 font-medium uppercase tracking-widest mb-2">Entradas Mensais</p>
+                 <h3 className="text-2xl font-semibold text-emerald-500">R$ {monthlyStats.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
+              </div>
+              <div className="bg-neutral-950 border border-rose-900/20 rounded-[2rem] p-8 shadow-xl">
+                 <p className="text-[10px] text-rose-500/60 font-medium uppercase tracking-widest mb-2">Saídas Mensais</p>
+                 <h3 className="text-2xl font-semibold text-rose-500">R$ {monthlyStats.expenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
+              </div>
+              <div className="bg-neutral-950 border border-neutral-800 rounded-[2rem] p-8 shadow-xl">
+                 <p className="text-[10px] text-neutral-600 font-medium uppercase tracking-widest mb-2">Saldo do Mês</p>
+                 <h3 className="text-2xl font-semibold text-white">R$ {monthlyStats.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
               <div className="bg-neutral-950 border border-neutral-900 rounded-[3rem] p-12 flex flex-col shadow-2xl">
-                <h3 className="text-xs font-black uppercase tracking-[0.3em] text-white mb-10 border-b border-neutral-900 pb-6 opacity-60">Daily Objectives</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-[0.3em] text-white mb-10 border-b border-neutral-900 pb-6 opacity-60">Diretrizes do Dia</h3>
                 <div className="space-y-8 flex-1">
                   {tasks.slice(0, 4).map((task) => (
                     <div key={task.id} onClick={() => toggleTask(task.id)} className="flex items-center gap-8 group cursor-pointer transition-all">
                       <div className={`w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center shrink-0 ${task.completed ? 'bg-[#d4af37] border-[#d4af37]' : 'border-neutral-800 group-hover:border-neutral-500'}`}>
-                        {task.completed && <Check size={16} className="text-black" strokeWidth={4} />}
+                        {task.completed && <Check size={16} className="text-black" strokeWidth={3} />}
                       </div>
-                      <span className={`text-xl font-bold tracking-tight transition-all uppercase ${task.completed ? 'text-neutral-700 line-through' : 'text-neutral-200'}`}>
+                      <span className={`text-xl font-normal tracking-tight transition-all uppercase ${task.completed ? 'text-neutral-700 line-through' : 'text-neutral-200'}`}>
                         {task.title}
                       </span>
                     </div>
                   ))}
-                  {tasks.length === 0 && <p className="text-center text-neutral-800 uppercase text-[10px] tracking-widest py-10 font-black">Nenhum comando.</p>}
                 </div>
               </div>
 
-              <div className="bg-neutral-950 border border-neutral-900 rounded-[3rem] p-12 flex flex-col items-center justify-center relative shadow-2xl">
-                <div className="absolute top-10 left-10 flex items-center gap-4">
-                  <Zap size={20} className="text-[#d4af37]" />
-                  <h3 className="text-[11px] font-black uppercase tracking-[0.4em] text-neutral-600">Core Metrics</h3>
-                </div>
+              <div className="bg-neutral-950 border border-neutral-900 rounded-[3rem] p-12 flex flex-col items-center justify-center relative shadow-2xl overflow-hidden">
                 <RadarScoreChart data={[
                   { label: 'Foco', value: totalCount > 0 ? (completedCount / totalCount) * 100 : 0, color: '#d4af37' },
-                  { label: 'Fluxo', value: Math.min(100, (stats.balance / 10000) * 100), color: '#d4af37' },
+                  { label: 'Fluxo', value: Math.min(100, (totalEquity / 10000) * 100), color: '#d4af37' },
                   { label: 'Ação', value: Math.min(100, (stats.xp / 5000) * 100), color: '#d4af37' },
                   { label: 'Metas', value: goals.length > 0 ? (completedGoalsCount / goals.length) * 100 : 0, color: '#d4af37' },
                   { label: 'Nero', value: 85, color: '#d4af37' }
@@ -594,355 +494,225 @@ export const App: React.FC = () => {
         )}
 
         {activeTab === 'finances' && (
-          <div className="space-y-12 animate-in fade-in duration-1000 pb-20">
+          <div className="space-y-12 pb-24">
             <header className="flex flex-col items-center gap-10">
-              <VWalletLogo className="w-20 h-20" />
               <div className="flex items-center gap-10">
-                <button onClick={() => changeMonth(-1)} className="p-4 bg-neutral-900/50 rounded-2xl hover:bg-neutral-800 transition-all border border-neutral-800">
-                  <ChevronLeft className="text-neutral-500" size={24} />
-                </button>
-                <div className="text-center">
-                  <h2 className="text-3xl text-modern-bold tracking-tight uppercase font-black">
-                    {new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(viewDate)}
-                  </h2>
-                </div>
-                <button onClick={() => changeMonth(1)} className="p-4 bg-neutral-900/50 rounded-2xl hover:bg-neutral-800 transition-all border border-neutral-800">
-                  <ChevronRight className="text-neutral-500" size={24} />
-                </button>
+                <button onClick={() => changeMonth(-1)} className="p-4 bg-neutral-900/50 rounded-2xl border border-neutral-800"><ChevronLeft size={24} /></button>
+                <h2 className="text-3xl font-bold uppercase">{currentMonthName}</h2>
+                <button onClick={() => changeMonth(1)} className="p-4 bg-neutral-900/50 rounded-2xl border border-neutral-800"><ChevronRight size={24} /></button>
               </div>
             </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              <div className="bg-neutral-950 border border-emerald-900/20 rounded-[2.5rem] p-10 shadow-2xl relative group">
-                <TrendingUp className="absolute top-8 right-8 text-emerald-800 opacity-20" size={40} />
-                <p className="text-[11px] text-emerald-500/60 font-black uppercase tracking-[0.4em] mb-4">CRÉDITOS MENSAL</p>
-                <h3 className="text-4xl text-modern-bold font-black text-emerald-500">R$ {monthlyStats.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
-              </div>
-              <div className="bg-neutral-950 border border-rose-900/20 rounded-[2.5rem] p-10 shadow-2xl relative group">
-                <TrendingDown className="absolute top-8 right-8 text-rose-800 opacity-20" size={40} />
-                <p className="text-[11px] text-rose-500/60 font-black uppercase tracking-[0.4em] mb-4">DÉBITOS MENSAL</p>
-                <h3 className="text-4xl text-modern-bold font-black text-rose-500">R$ {monthlyStats.expenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
-              </div>
-              <div className="bg-neutral-950 border border-neutral-800 rounded-[2.5rem] p-10 shadow-2xl relative group md:col-span-2 lg:col-span-1">
-                <PieChart className="absolute top-8 right-8 text-neutral-700 opacity-20" size={40} />
-                <p className="text-[11px] text-neutral-500 font-black uppercase tracking-[0.4em] mb-4">CAPITAL LÍQUIDO</p>
-                <h3 className="text-4xl text-modern-bold font-black text-white">R$ {monthlyStats.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
-              </div>
-            </div>
-
-            {/* Balanço Patrimonial Integrado e Editável */}
             <Card className="bg-neutral-950 border border-neutral-900 rounded-[3rem] p-12 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-12">
               <div className="flex items-center gap-8">
-                 <div className="w-16 h-16 bg-[#d4af37]/10 rounded-full flex items-center justify-center border border-[#d4af37]/10 shadow-xl">
+                 <div className="w-16 h-16 bg-[#d4af37]/10 rounded-full flex items-center justify-center border border-[#d4af37]/10">
                     <Wallet className="text-[#d4af37]" size={28} />
                  </div>
                  <div>
-                    <p className="text-[11px] text-neutral-600 font-black uppercase tracking-[0.4em] mb-2">BALANÇO PATRIMONIAL TOTAL</p>
-                    <h3 className="text-5xl text-modern-bold font-black text-white">R$ {(initialReserve + monthlyStats.balance).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
+                    <p className="text-[11px] text-neutral-600 font-medium uppercase tracking-[0.4em] mb-2">BALANÇO PATRIMONIAL TOTAL</p>
+                    {isEditingBalance ? (
+                      <div className="flex items-center gap-4">
+                        <input 
+                          type="text" 
+                          value={tempBalance}
+                          onChange={e => setTempBalance(formatAsCurrencyInput(e.target.value))}
+                          className="bg-black border-b-2 border-[#d4af37] text-3xl font-semibold w-56 outline-none"
+                          autoFocus
+                        />
+                        <button onClick={handleUpdateTotalBalance} className="p-3 bg-[#d4af37] text-black rounded-full"><Save size={18}/></button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-4">
+                        <h3 className="text-5xl font-bold text-white">R$ {totalEquity.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
+                        <button onClick={() => { setTempBalance(totalEquity.toLocaleString('pt-BR', { minimumFractionDigits: 2 })); setIsEditingBalance(true); }} className="text-neutral-600 hover:text-[#d4af37]"><Pencil size={20}/></button>
+                      </div>
+                    )}
                  </div>
-              </div>
-              <div className="flex gap-6 items-center">
-                <div className="text-right">
-                  <p className="text-[10px] text-neutral-700 font-black uppercase tracking-[0.3em] mb-1">RESERVA INICIAL</p>
-                  <p className="text-xl font-black text-neutral-500">R$ {initialReserve.toLocaleString('pt-BR')}</p>
-                </div>
-                <button onClick={() => {
-                  const val = prompt("Definir Reserva Inicial (Baseline):", initialReserve.toString());
-                  if (val && !isNaN(Number(val))) {
-                    setInitialReserve(Number(val));
-                    triggerFireworks();
-                  }
-                }} className="p-4 bg-neutral-900 rounded-xl hover:bg-[#d4af37] hover:text-black transition-all border border-neutral-800"><Edit2 size={20}/></button>
               </div>
             </Card>
 
-            {/* FORMULÁRIO DE LANÇAMENTO MANUAL RESTORADO */}
             <Card className="bg-neutral-950 border-neutral-900 rounded-[3rem] p-12 shadow-2xl space-y-8">
-              <h3 className="text-[11px] font-black uppercase tracking-[0.5em] text-[#d4af37]">Novo Lançamento Manual</h3>
+              <h3 className="text-[11px] font-medium uppercase tracking-[0.5em] text-[#d4af37]">Novo Lançamento Manual</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="space-y-2">
-                  <label className="text-[9px] font-black uppercase tracking-widest text-neutral-600">Descrição</label>
-                  <input 
-                    type="text" 
-                    placeholder="Ex: Pizza, Janta, Aluguel" 
-                    value={newTransDesc}
-                    onChange={e => setNewTransDesc(e.target.value)}
-                    className="w-full bg-black border border-neutral-800 p-4 rounded-xl font-bold outline-none focus:border-[#d4af37]"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[9px] font-black uppercase tracking-widest text-neutral-600">Valor (R$)</label>
-                  <input 
-                    type="text" 
-                    placeholder="0,00" 
-                    value={newTransAmount}
-                    onChange={e => setNewTransAmount(e.target.value)}
-                    className="w-full bg-black border border-neutral-800 p-4 rounded-xl font-bold outline-none focus:border-[#d4af37]"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[9px] font-black uppercase tracking-widest text-neutral-600">Categoria</label>
-                  <select 
-                    value={newTransCategory}
-                    onChange={e => setNewTransCategory(e.target.value)}
-                    className="w-full bg-black border border-neutral-800 p-4 rounded-xl font-bold outline-none focus:border-[#d4af37] appearance-none"
-                  >
-                    {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[9px] font-black uppercase tracking-widest text-neutral-600">Tipo</label>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => setNewTransType('REVENUE')}
-                      className={`flex-1 p-4 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${newTransType === 'REVENUE' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-neutral-900 text-neutral-600'}`}
-                    >
-                      Receita
-                    </button>
-                    <button 
-                      onClick={() => setNewTransType('EXPENSE')}
-                      className={`flex-1 p-4 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${newTransType === 'EXPENSE' ? 'bg-rose-600 text-white shadow-lg' : 'bg-neutral-900 text-neutral-600'}`}
-                    >
-                      Despesa
-                    </button>
-                  </div>
+                <input 
+                  type="text" 
+                  placeholder="Descrição" 
+                  value={newTransDesc}
+                  onChange={e => setNewTransDesc(e.target.value)}
+                  className="w-full bg-black border border-neutral-800 p-4 rounded-xl outline-none focus:border-[#d4af37]"
+                />
+                <input 
+                  type="text" 
+                  placeholder="Valor R$ 0,00" 
+                  value={newTransAmount}
+                  onChange={e => setNewTransAmount(formatAsCurrencyInput(e.target.value))}
+                  className="w-full bg-black border border-neutral-800 p-4 rounded-xl outline-none focus:border-[#d4af37]"
+                />
+                <select 
+                  value={newTransCategory}
+                  onChange={e => setNewTransCategory(e.target.value)}
+                  className="w-full bg-black border border-neutral-800 p-4 rounded-xl outline-none focus:border-[#d4af37]"
+                >
+                  {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                </select>
+                <div className="flex gap-2">
+                  <button onClick={() => setNewTransType('REVENUE')} className={`flex-1 p-4 rounded-xl font-bold uppercase text-[9px] ${newTransType === 'REVENUE' ? 'bg-emerald-600 text-white' : 'bg-neutral-900 text-neutral-500'}`}>Receita</button>
+                  <button onClick={() => setNewTransType('EXPENSE')} className={`flex-1 p-4 rounded-xl font-bold uppercase text-[9px] ${newTransType === 'EXPENSE' ? 'bg-rose-600 text-white' : 'bg-neutral-900 text-neutral-500'}`}>Despesa</button>
                 </div>
               </div>
-              <button 
-                onClick={handleAddManualTransaction}
-                className="btn-modern w-full py-6 bg-gradient-to-r from-[#b8860b] to-[#d4af37] text-black rounded-2xl font-black uppercase tracking-[0.5em] text-[11px] shadow-3xl"
-              >
-                Confirmar Lançamento
-              </button>
-            </Card>
-
-            {/* Orçamento Mensal Progress Bar */}
-            <Card className="bg-neutral-950 border-neutral-900 rounded-[3rem] p-12 shadow-2xl space-y-8">
-               <div className="flex justify-between items-end">
-                 <div>
-                   <h4 className="text-[11px] font-black uppercase tracking-[0.4em] text-neutral-500 mb-2">LIMITE DE ORÇAMENTO</h4>
-                   <p className="text-2xl font-black text-white">R$ {monthlyStats.expenses.toLocaleString('pt-BR')} de R$ {monthlyLimit.toLocaleString('pt-BR')}</p>
-                 </div>
-                 <span className={`text-sm font-black uppercase tracking-widest ${monthlyStats.budgetPercentage > 90 ? 'text-rose-500' : 'text-emerald-500'}`}>
-                    {monthlyStats.budgetPercentage}% CONSUMIDO
-                 </span>
-               </div>
-               <div className="h-4 bg-neutral-900 rounded-full overflow-hidden border border-neutral-800 shadow-inner">
-                 <div 
-                  className={`h-full transition-all duration-1000 ${monthlyStats.budgetPercentage > 90 ? 'bg-rose-600' : 'bg-[#d4af37]'}`} 
-                  style={{ width: `${monthlyStats.budgetPercentage}%` }} 
-                 />
-               </div>
+              <button onClick={handleAddManualTransaction} className="btn-modern w-full py-6 bg-gradient-to-r from-[#b8860b] to-[#d4af37] text-black rounded-2xl font-bold uppercase tracking-[0.4em] text-[11px]">Registrar Lançamento</button>
             </Card>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-              {/* Gráfico de Categorias Restorado */}
-              <div className="bg-neutral-950 border border-neutral-900 rounded-[3rem] p-12 shadow-3xl">
-                <CategoryExpensesChart transactions={currentMonthTransactions} />
-              </div>
-
-              {/* Histórico de Transações Restorado */}
-              <div className="bg-neutral-950 border border-neutral-900 rounded-[3rem] p-12 shadow-3xl flex flex-col h-[500px]">
-                <div className="flex justify-between items-center mb-8 pb-4 border-b border-neutral-900">
-                  <h3 className="text-[11px] font-black uppercase tracking-[0.4em] text-white">HISTÓRICO RECENTE</h3>
-                  <button className="text-[10px] font-black text-[#d4af37] uppercase tracking-widest hover:underline">Ver tudo</button>
-                </div>
-                <div className="flex-1 overflow-y-auto space-y-4 no-scrollbar pr-2">
-                   {currentMonthTransactions.length === 0 ? (
-                      <p className="text-center text-neutral-800 uppercase tracking-widest py-20 text-[10px] font-black">Nenhuma movimentação este mês.</p>
-                   ) : (
-                     currentMonthTransactions.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(t => (
-                        <div key={t.id} className="flex items-center justify-between p-5 bg-black/40 border border-neutral-900 rounded-2xl group hover:border-neutral-700 transition-all">
-                          <div className="flex items-center gap-4">
-                            <div className={`p-3 rounded-xl ${t.type === 'REVENUE' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
-                              {t.type === 'REVENUE' ? <ArrowUpCircle size={20} /> : <ArrowDownCircle size={20} />}
-                            </div>
-                            <div>
-                              <p className="text-sm font-black text-white uppercase tracking-tight line-clamp-1">{t.description}</p>
-                              <p className="text-[10px] font-black text-neutral-600 uppercase tracking-widest">{t.category} • {new Date(t.date).toLocaleDateString('pt-BR')}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-5">
-                            <p className={`text-sm font-black ${t.type === 'REVENUE' ? 'text-emerald-500' : 'text-rose-500'}`}>
-                              {t.type === 'REVENUE' ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR')}
-                            </p>
-                            <button onClick={() => handleDeleteTransaction(t.id)} className="opacity-0 group-hover:opacity-100 p-2 text-neutral-700 hover:text-rose-500 transition-all">
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                        </div>
-                     ))
-                   )}
-                </div>
-              </div>
+               <div className="bg-neutral-950 border border-neutral-900 rounded-[3rem] p-12 shadow-3xl">
+                 <CategoryExpensesChart transactions={currentMonthTransactions} />
+               </div>
+               <Card className="bg-neutral-950 border border-neutral-900 rounded-[3rem] p-12 shadow-3xl h-[500px] flex flex-col">
+                 <h3 className="text-[11px] font-medium uppercase tracking-[0.4em] text-white mb-8 border-b border-neutral-900 pb-4">Histórico Recente</h3>
+                 <div className="flex-1 overflow-y-auto space-y-4 no-scrollbar">
+                   {currentMonthTransactions.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(t => (
+                     <div key={t.id} className="flex items-center justify-between p-5 bg-black/40 border border-neutral-900 rounded-2xl group transition-all">
+                       <div className="flex items-center gap-4">
+                         <div className={`p-3 rounded-xl ${t.type === 'REVENUE' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                           {t.type === 'REVENUE' ? <ArrowUpCircle size={20} /> : <ArrowDownCircle size={20} />}
+                         </div>
+                         <div>
+                           <p className="text-sm font-medium text-white uppercase">{t.description}</p>
+                           <p className="text-[10px] text-neutral-600 uppercase tracking-widest">{t.category} • {new Date(t.date).toLocaleDateString('pt-BR')}</p>
+                         </div>
+                       </div>
+                       <div className="flex items-center gap-5">
+                         <p className={`text-sm font-semibold ${t.type === 'REVENUE' ? 'text-emerald-500' : 'text-rose-500'}`}>R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                         <button onClick={() => handleDeleteTransaction(t.id)} className="opacity-0 group-hover:opacity-100 p-2 text-neutral-700 hover:text-rose-500 transition-all"><Trash2 size={16} /></button>
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               </Card>
             </div>
-
-            <button onClick={() => setIsAiOpen(true)} className="btn-modern w-full py-8 bg-gradient-to-r from-[#b8860b] to-[#d4af37] text-black rounded-full font-black uppercase tracking-[0.5em] text-[12px] shadow-3xl flex items-center justify-center gap-6">
-               <Bot size={28} /> Sincronizar Novo Lançamento com Nero
-            </button>
           </div>
         )}
 
         {activeTab === 'tasks' && (
-          <div className="space-y-12 animate-in fade-in duration-1000">
-             <header className="space-y-10">
-              <h2 className="text-5xl text-modern-bold tracking-tight font-black uppercase">Diretrizes de Performance</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                <div className="bg-neutral-950 border border-neutral-900 rounded-[2.5rem] p-10 flex items-center gap-8 shadow-xl">
-                  <div className="w-16 h-16 rounded-[1.5rem] bg-rose-500/10 flex items-center justify-center border border-rose-500/10 shadow-inner">
-                    <TargetIcon size={28} className="text-rose-600" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-neutral-700 uppercase font-black tracking-[0.4em] mb-2">META FREQUENTE</p>
-                    <p className="text-2xl font-black text-white uppercase">{mostDone.title}</p>
-                    <p className="text-[11px] text-neutral-600 font-black uppercase tracking-widest">{mostDone.count} execuções</p>
-                  </div>
-                </div>
-                <div className="bg-neutral-950 border border-neutral-900 rounded-[2.5rem] p-10 flex items-center gap-8 shadow-xl">
-                  <div className="w-16 h-16 rounded-[1.5rem] bg-emerald-500/10 flex items-center justify-center border border-emerald-500/10 shadow-inner">
-                    <Calendar size={28} className="text-emerald-600" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-neutral-700 uppercase font-black tracking-[0.4em] mb-2">CICLO ATIVO</p>
-                    <p className="text-2xl font-black text-white uppercase">{currentMonthName}</p>
-                    <p className="text-[11px] text-neutral-600 font-black uppercase tracking-widest">{activeItemsCount} pendências</p>
-                  </div>
-                </div>
-              </div>
-            </header>
-
-            <Card className="rounded-[3rem] p-12 bg-neutral-950 border-neutral-900 shadow-3xl">
+          <div className="space-y-12 pb-24">
+             <header><h2 className="text-4xl font-bold tracking-tight uppercase">Performances</h2></header>
+            <Card className="rounded-[3rem] p-12 bg-neutral-950 border-neutral-900 shadow-2xl">
               <div className="flex gap-6 mb-12">
                 <input 
-                  id="new-task-input"
                   type="text" 
-                  placeholder="Defina sua próxima missão..." 
-                  className="flex-1 bg-black/50 border-b-2 border-neutral-800 p-6 text-xl font-black outline-none focus:border-[#d4af37] transition-all" 
+                  placeholder="Defina sua missão..." 
+                  className="flex-1 bg-black/50 border-b-2 border-neutral-800 p-6 text-xl outline-none focus:border-[#d4af37]" 
                   value={newTaskTitle} 
                   onChange={e => setNewTaskTitle(e.target.value)} 
                   onKeyDown={e => { if (e.key === 'Enter' && newTaskTitle.trim()) { setTasks(prev => [{ id: Date.now().toString(), title: newTaskTitle, priority: Priority.MEDIUM, completed: false, xpValue: 20 }, ...prev]); setNewTaskTitle(''); } }} 
                 />
-                <button onClick={() => { if (newTaskTitle.trim()) { setTasks(prev => [{ id: Date.now().toString(), title: newTaskTitle, priority: Priority.MEDIUM, completed: false, xpValue: 20 }, ...prev]); setNewTaskTitle(''); } }} className="btn-modern p-6 bg-[#d4af37] text-black rounded-3xl shadow-2xl flex items-center justify-center min-w-[80px]"><Plus size={32} strokeWidth={4} /></button>
+                <button onClick={() => { if (newTaskTitle.trim()) { setTasks(prev => [{ id: Date.now().toString(), title: newTaskTitle, priority: Priority.MEDIUM, completed: false, xpValue: 20 }, ...prev]); setNewTaskTitle(''); } }} className="p-6 bg-[#d4af37] text-black rounded-3xl"><Plus size={32} strokeWidth={3} /></button>
               </div>
               <div className="space-y-6">
                 {tasks.map(task => (
-                  <div key={task.id} onClick={() => toggleTask(task.id)} className={`p-8 border rounded-[2rem] flex items-center gap-8 cursor-pointer transition-all ${task.completed ? 'opacity-30 bg-neutral-950/30 border-neutral-900' : 'border-neutral-900 hover:border-[#d4af37]/40 hover:bg-neutral-900 shadow-xl'}`}>
-                    <div className={`w-8 h-8 rounded-full border-4 flex items-center justify-center transition-all ${task.completed ? 'bg-[#d4af37] border-[#d4af37]' : 'border-neutral-800'}`}>
-                      {task.completed && <Check size={16} className="text-black" strokeWidth={5} />}
+                  <div key={task.id} onClick={() => toggleTask(task.id)} className={`p-8 border rounded-[2rem] flex items-center gap-8 cursor-pointer transition-all ${task.completed ? 'opacity-30' : 'border-neutral-900 hover:border-[#d4af37]/40 bg-neutral-950/50'}`}>
+                    <div className={`w-8 h-8 rounded-full border-4 flex items-center justify-center ${task.completed ? 'bg-[#d4af37] border-[#d4af37]' : 'border-neutral-800'}`}>
+                      {task.completed && <Check size={16} className="text-black" strokeWidth={3} />}
                     </div>
-                    <span className={`text-xl uppercase font-black tracking-tight flex-1 ${task.completed ? 'line-through text-neutral-700' : 'text-neutral-200'}`}>{task.title}</span>
+                    <span className={`text-xl uppercase flex-1 ${task.completed ? 'line-through text-neutral-600' : ''}`}>{task.title}</span>
                   </div>
                 ))}
-                {tasks.length === 0 && <p className="text-center text-neutral-800 uppercase tracking-[0.8em] py-20 text-[12px] font-black">Nenhum comando pendente.</p>}
               </div>
             </Card>
           </div>
         )}
 
         {activeTab === 'goals' && (
-           <div className="space-y-12 animate-in fade-in duration-1000">
-             <header className="space-y-10">
-              <h2 className="text-5xl text-modern-bold tracking-tight font-black uppercase">Metas e Conquistas</h2>
-             </header>
+           <div className="space-y-12 pb-24">
+             <header><h2 className="text-4xl font-bold tracking-tight uppercase">Metas</h2></header>
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 <div className="bg-neutral-950 border border-neutral-900 rounded-[3rem] p-10 shadow-xl">
                   <GoalProgressCard activeCount={activeGoalsCount} completedCount={completedGoalsCount} />
                 </div>
                 {goals.map(goal => (
-                  <Card key={goal.id} className="relative overflow-hidden p-10 bg-neutral-950 border-neutral-900 rounded-[3rem] shadow-xl group">
-                    <div className="flex justify-between items-start mb-6">
-                      <div className="p-3 bg-neutral-900 rounded-2xl border border-neutral-800 text-[#d4af37]"><Flag size={20}/></div>
-                      <button className="p-2 text-neutral-800 hover:text-rose-500 transition-all opacity-0 group-hover:opacity-100"><Trash2 size={16}/></button>
-                    </div>
-                    <h4 className="text-xl font-black text-white uppercase tracking-tight mb-2">{goal.title}</h4>
-                    <p className="text-[10px] text-neutral-600 font-black uppercase tracking-[0.2em] mb-8">PROGRESSO: {goal.current} / {goal.target} {goal.unit}</p>
+                  <Card key={goal.id} className="relative p-10 bg-neutral-950 border-neutral-900 rounded-[3rem] group shadow-xl">
+                    <h4 className="text-xl font-semibold uppercase mb-2">{goal.title}</h4>
+                    <p className="text-[10px] text-neutral-600 font-medium uppercase mb-8">{goal.current} / {goal.target} {goal.unit}</p>
                     <div className="h-3 bg-neutral-900 rounded-full overflow-hidden mb-8 border border-neutral-800">
                       <div className="h-full bg-[#d4af37] transition-all duration-700" style={{ width: `${(goal.current / goal.target) * 100}%` }} />
                     </div>
-                    <div className="flex gap-4">
-                      <button onClick={() => handleUpdateGoal(goal.id, 1)} className="flex-1 py-4 bg-neutral-900 border border-neutral-800 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-[#d4af37] hover:text-black transition-all">+ Incrementar</button>
-                    </div>
+                    <button onClick={() => handleUpdateGoal(goal.id, 1)} className="w-full py-4 bg-neutral-900 text-white rounded-2xl font-bold uppercase text-[10px] border border-neutral-800">+ Incrementar</button>
                   </Card>
                 ))}
                 <button onClick={() => {
-                  const title = prompt("Título da Meta:");
-                  const target = prompt("Valor Alvo:");
-                  if (title && target) {
-                    setGoals(prev => [...prev, { id: Date.now().toString(), title, target: Number(target), current: 0, unit: 'un', completed: false }]);
-                  }
-                }} className="border-2 border-dashed border-neutral-900 rounded-[3rem] p-10 flex flex-col items-center justify-center gap-4 text-neutral-800 hover:text-[#d4af37] hover:border-[#d4af37] transition-all group">
-                   <Plus size={40} className="group-hover:scale-110 transition-transform"/>
-                   <span className="text-[11px] font-black uppercase tracking-[0.4em]">Nova Meta Estratégica</span>
+                  const title = prompt("Qual sua meta?");
+                  const target = prompt("Qual o valor alvo?");
+                  if (title && target) setGoals(prev => [...prev, { id: Date.now().toString(), title, target: Number(target), current: 0, unit: 'un', completed: false }]);
+                }} className="border-2 border-dashed border-neutral-900 rounded-[3rem] p-10 flex flex-col items-center justify-center gap-4 text-neutral-800 hover:text-[#d4af37] hover:border-[#d4af37] transition-all">
+                   <Plus size={40}/>
+                   <span className="text-[11px] font-medium uppercase tracking-widest">Nova Meta Estratégica</span>
                 </button>
              </div>
            </div>
         )}
       </main>
 
-      {/* CHAT NERO - UI Moderna */}
+      {/* CHAT NERO */}
       {isAiOpen && (
-        <div className="fixed inset-0 lg:inset-auto lg:bottom-12 lg:right-12 lg:w-[480px] lg:h-[840px] bg-black border border-neutral-900 lg:rounded-[3.5rem] flex flex-col z-[500] shadow-[0_40px_150px_rgba(0,0,0,1)] animate-in slide-in-from-bottom-12 duration-1000 overflow-hidden">
-          <div className="p-10 border-b border-neutral-900 flex justify-between items-center bg-black/95 backdrop-blur-3xl">
-            <div className="flex items-center gap-6">
-              <div className="relative">
-                <div className="w-3.5 h-3.5 bg-[#d4af37] rounded-full animate-pulse shadow-[0_0_25px_#d4af37]" />
-                <div className="absolute inset-0 bg-[#d4af37] rounded-full animate-ping opacity-10" />
+        <div className="fixed inset-0 lg:inset-auto lg:bottom-12 lg:right-12 lg:w-[480px] lg:h-[840px] bg-black border border-neutral-900 lg:rounded-[3.5rem] flex flex-col z-[500] shadow-[0_40px_100px_rgba(0,0,0,1)] overflow-hidden animate-in slide-in-from-bottom-12 duration-500">
+          <div className="p-10 border-b border-neutral-900 flex justify-between items-center bg-black/95 backdrop-blur-xl">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full border-2 border-[#d4af37]/50 overflow-hidden shadow-[0_0_15px_rgba(212,175,55,0.3)] bg-neutral-900">
+                <img src={NERO_AVATAR} alt="Nero Pet" className="w-full h-full object-cover" />
               </div>
-              <div className="flex flex-col"><span className="uppercase text-[14px] tracking-[0.5em] font-black text-chique">Nero AI</span><span className="text-[10px] text-neutral-600 uppercase font-black tracking-[0.4em]">Sincronização Ativa 5.0</span></div>
+              <span className="uppercase text-[14px] font-bold text-[#d4af37] tracking-[0.3em]">NERO AI</span>
             </div>
-            <button onClick={() => setIsAiOpen(false)} className="text-neutral-600 hover:text-white transition-colors bg-neutral-950 p-4 rounded-3xl border border-neutral-900"><X size={24} /></button>
+            <button onClick={() => setIsAiOpen(false)} className="text-neutral-600 hover:text-white transition-colors bg-neutral-900 p-3 rounded-full"><X size={20} /></button>
           </div>
-          <div className="flex-1 overflow-y-auto p-10 space-y-8 no-scrollbar bg-neutral-950/20">
+          <div 
+            className="flex-1 overflow-y-auto p-10 space-y-8 no-scrollbar"
+            style={{ background: 'radial-gradient(circle at 50% 10%, #660000 0%, #000000 80%)' }}
+          >
             {messages.length === 0 && (
-              <div className="text-center py-32 space-y-10 animate-in fade-in zoom-in-95 duration-1000">
-                <ShieldCheck className="mx-auto text-[#d4af37] opacity-10" size={100} />
-                <div className="space-y-5">
-                   <p className="text-[11px] text-neutral-700 uppercase tracking-[0.7em] font-black">Terminal Nero Operacional</p>
-                   <p className="text-sm text-neutral-500 font-black px-12 leading-relaxed opacity-70 italic">"Nero, registre aporte de R$ 5.000 para investimentos"
-"Priorize nova tarefa: Planejamento Q3"</p>
+              <div className="text-center py-32 space-y-10 animate-in fade-in duration-1000">
+                <div className="relative inline-block">
+                  <div className="w-32 h-32 mx-auto rounded-full border-4 border-[#d4af37]/20 overflow-hidden opacity-60 hover:opacity-100 transition-opacity shadow-2xl bg-neutral-900">
+                    <img src={NERO_AVATAR} alt="Pet Nero" className="w-full h-full object-cover" />
+                  </div>
+                  <Sparkles className="absolute -top-2 -right-2 text-[#d4af37] animate-pulse" />
                 </div>
+                <p className="text-sm text-neutral-500 font-normal italic px-8 opacity-60">"Nero, registre um gasto de R$ 50 com almoço"</p>
               </div>
             )}
             {messages.map((m, i) => (
-              <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-6 duration-500`}>
-                <div className={`max-w-[90%] p-8 rounded-[2rem] text-sm tracking-tight leading-relaxed font-black uppercase ${m.role === 'user' ? 'bg-[#d4af37] text-black shadow-2xl' : m.role === 'system' ? 'bg-neutral-900 text-neutral-700 text-[10px] text-center w-full rounded-2xl' : 'bg-neutral-950 border border-neutral-900 text-white shadow-xl'}`}>{m.text}</div>
+              <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-4 duration-300`}>
+                <div className={`max-w-[90%] p-6 rounded-[2rem] text-sm font-normal uppercase ${m.role === 'user' ? 'bg-[#d4af37] text-black shadow-lg' : 'bg-neutral-900 text-white border border-neutral-800 shadow-xl'}`}>{m.text}</div>
               </div>
             ))}
-            {isAiLoading && <div className="text-[#d4af37] animate-pulse text-[11px] uppercase font-black px-8 flex items-center gap-5 tracking-[0.4em]"><Loader2 className="animate-spin" size={20} /> Sincronizando com Nero...</div>}
+            {isAiLoading && <div className="text-[#d4af37] animate-pulse text-[11px] uppercase font-medium px-8 flex items-center gap-3"><Loader2 className="animate-spin" size={16}/> Nero está processando...</div>}
           </div>
-          <div className="p-10 border-t border-neutral-900 space-y-8 bg-neutral-950/95 backdrop-blur-3xl pb-24 lg:pb-16 shadow-[0_-40px_80px_rgba(0,0,0,0.7)]">
+          <div className="p-10 border-t border-neutral-900 space-y-8 bg-neutral-950/95 pb-24 lg:pb-16 backdrop-blur-xl">
             <div className="flex gap-5 items-center">
-              <input type="text" placeholder="Dite comandos para Nero..." value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && chatInput.trim()) handleAiChat(chatInput); }} className="flex-1 bg-black border border-neutral-800 p-6 rounded-3xl text-sm font-black transition-all placeholder:text-neutral-800 focus:border-[#d4af37] outline-none shadow-inner" />
-              <button onMouseDown={startRecording} onMouseUp={stopRecording} onMouseLeave={stopRecording} onTouchStart={startRecording} onTouchEnd={stopRecording} className={`p-6 rounded-3xl transition-all shadow-2xl ${isRecording ? 'bg-rose-700 text-white animate-pulse' : 'bg-neutral-900 text-neutral-600 hover:text-[#d4af37] border border-neutral-800'}`}><Mic size={30} /></button>
-              <button onClick={() => chatInput.trim() && handleAiChat(chatInput)} className="btn-modern p-6 bg-[#d4af37] text-black rounded-3xl shadow-2xl"><Send size={30} strokeWidth={4} /></button>
+              <input type="text" placeholder="Comande o Nero..." value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAiChat(chatInput)} className="flex-1 bg-black border border-neutral-800 p-6 rounded-3xl text-sm outline-none focus:border-[#d4af37] shadow-inner" />
+              <button onMouseDown={startRecording} onMouseUp={stopRecording} className={`p-6 rounded-3xl transition-all shadow-xl ${isRecording ? 'bg-rose-700 text-white animate-pulse' : 'bg-neutral-900 text-neutral-600'}`}><Mic size={30} /></button>
+              <button onClick={() => handleAiChat(chatInput)} className="p-6 bg-[#d4af37] text-black rounded-3xl shadow-xl transition-all active:scale-90"><Send size={30} strokeWidth={3} /></button>
             </div>
-            <p className="text-[10px] text-neutral-800 text-center uppercase tracking-[0.8em] font-black">{isRecording ? "NERO EM ESCUTA" : "AGUARDANDO PROTOCOLO"}</p>
           </div>
         </div>
       )}
 
-      {/* NAVEGAÇÃO MOBILE FIXA NO BOTTOM - Garantida com fixed bottom-0 left-0 right-0 */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 flex items-center justify-center gap-5 bg-black/90 backdrop-blur-3xl border-t border-neutral-900 p-4 pb-8 z-[400] shadow-[0_-20px_60px_rgba(0,0,0,0.8)]">
-        {[ 
-          { id: 'dashboard', icon: LayoutDashboard }, 
-          { id: 'finances', icon: Wallet }, 
-          { id: 'tasks', icon: CheckSquare }, 
-          { id: 'goals', icon: Flag } 
-        ].map(item => (
-          <button 
-            key={item.id} 
-            onClick={() => setActiveTab(item.id)} 
-            className={`p-5 rounded-full transition-all active:scale-90 ${activeTab === item.id ? 'bg-[#d4af37] text-black shadow-2xl' : 'text-neutral-700'}`}
-          >
-            <item.icon size={26} />
-          </button>
-        ))}
-        <div className="w-[1px] h-10 bg-neutral-800 mx-2" />
-        <button 
-          onClick={() => setIsAiOpen(true)} 
-          className="p-5 rounded-full bg-[#d4af37]/10 text-[#d4af37] border border-[#d4af37]/10 active:scale-90 shadow-xl"
-        >
-          <Bot size={26} />
+      {/* NAVEGAÇÃO MOBILE */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-24 bg-black/95 backdrop-blur-3xl border-t border-neutral-900 flex items-center justify-around px-6 pb-6 z-[400] shadow-[0_-15px_40px_rgba(0,0,0,0.9)]">
+        <button onClick={() => setActiveTab('dashboard')} className={`p-4 rounded-full transition-all ${activeTab === 'dashboard' ? 'bg-[#d4af37] text-black' : 'text-neutral-700'}`}>
+          <LayoutDashboard size={26} />
+        </button>
+        <button onClick={() => setActiveTab('finances')} className={`p-4 rounded-full transition-all ${activeTab === 'finances' ? 'bg-[#d4af37] text-black' : 'text-neutral-700'}`}>
+          <Wallet size={26} />
+        </button>
+        {/* Botão AI Central no Mobile */}
+        <button onClick={() => setIsAiOpen(true)} className={`p-5 rounded-full transition-all border-2 border-[#d4af37]/20 ${isAiOpen ? 'bg-[#d4af37] text-black shadow-[0_0_20px_rgba(212,175,55,0.4)]' : 'bg-neutral-900 text-[#d4af37]'}`}>
+          <Bot size={30} />
+        </button>
+        <button onClick={() => setActiveTab('tasks')} className={`p-4 rounded-full transition-all ${activeTab === 'tasks' ? 'bg-[#d4af37] text-black' : 'text-neutral-700'}`}>
+          <CheckSquare size={26} />
+        </button>
+        <button onClick={() => setActiveTab('goals')} className={`p-4 rounded-full transition-all ${activeTab === 'goals' ? 'bg-[#d4af37] text-black' : 'text-neutral-700'}`}>
+          <Flag size={26} />
         </button>
       </nav>
     </div>
