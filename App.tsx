@@ -9,7 +9,6 @@ import {
   Trash2, 
   Mic, 
   X, 
-  Zap, 
   Flag, 
   Loader2,
   ChevronLeft,
@@ -33,10 +32,8 @@ import {
   Task, 
   UserStats 
 } from './types';
-import { 
-  CATEGORIES
-} from './constants';
-import { processAICmd } from './services/geminiService';
+import { CATEGORIES } from './constants';
+import { processAICmd, suggestEmoji } from './services/geminiService';
 import confetti from 'canvas-confetti';
 
 interface ChatMessage {
@@ -51,10 +48,10 @@ interface Goal {
   target: number;
   unit: string;
   completed: boolean;
+  emoji?: string;
 }
 
-// Avatar do Nero (Pet Corvo Imperial) - Atualizado com a nova imagem majestosa enviada pelo usuário
-const NERO_AVATAR = "https://raw.githubusercontent.com/StackBlitz/stackblitz-images/main/raven-nero-new.png"; 
+const NERO_AVATAR = "https://i.postimg.cc/mD8NnC67/nero-raven-majestic.png"; 
 
 const VWalletLogo = ({ className = "w-12 h-12" }: { className?: string }) => (
   <div className={`relative ${className} flex items-center justify-center`}>
@@ -68,7 +65,7 @@ const VWalletLogo = ({ className = "w-12 h-12" }: { className?: string }) => (
             <stop offset="0%" stopColor="#d4af37" />
             <stop offset="100%" stopColor="#f4a261" />
           </linearGradient>
-          <linearGradient id="coin-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+          <linearGradient id="coin-gradient" x1="0%" x2="0%" y2="100%">
             <stop offset="0%" stopColor="#ffd700" />
             <stop offset="100%" stopColor="#b8860b" />
           </linearGradient>
@@ -83,7 +80,6 @@ export const App: React.FC = () => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isOnboarding, setIsOnboarding] = useState(true);
   const [userName, setUserName] = useState('');
-  const [onboardingError, setOnboardingError] = useState('');
   const [activeTab, setActiveTab] = useState('dashboard');
   const [stats, setStats] = useState<UserStats>({ xp: 0, rank: Rank.INICIANTE, level: 1, totalRevenue: 0, totalExpenses: 0, balance: 0 });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -91,7 +87,6 @@ export const App: React.FC = () => {
   const [goals, setGoals] = useState<Goal[]>([]);
   
   const [viewDate, setViewDate] = useState(new Date());
-  const [monthlyLimit, setMonthlyLimit] = useState(5000); 
   const [initialReserve, setInitialReserve] = useState(0); 
 
   const [isAiOpen, setIsAiOpen] = useState(false);
@@ -112,7 +107,6 @@ export const App: React.FC = () => {
   const [newTransType, setNewTransType] = useState<'REVENUE' | 'EXPENSE'>('EXPENSE');
   const [newTransCategory, setNewTransCategory] = useState('Outros');
 
-  // Máscara de Moeda Financeira (ex: 1.234,56)
   const formatAsCurrencyInput = (value: string) => {
     let digits = value.replace(/\D/g, "");
     if (!digits) return "";
@@ -125,7 +119,6 @@ export const App: React.FC = () => {
     return parseFloat(formatted.replace(/\./g, "").replace(",", "."));
   };
 
-  // Cálculos Memoizados
   const currentMonthTransactions = useMemo((): Transaction[] => {
     const month = viewDate.getMonth();
     const year = viewDate.getFullYear();
@@ -143,11 +136,7 @@ export const App: React.FC = () => {
       if (t.type === 'REVENUE') revenueSum += amt;
       else expensesSum += amt;
     });
-    return { 
-      revenue: revenueSum, 
-      expenses: expensesSum, 
-      balance: revenueSum - expensesSum 
-    };
+    return { revenue: revenueSum, expenses: expensesSum, balance: revenueSum - expensesSum };
   }, [currentMonthTransactions]);
 
   const totalEquity = useMemo(() => initialReserve + monthlyStats.balance, [initialReserve, monthlyStats.balance]);
@@ -167,12 +156,8 @@ export const App: React.FC = () => {
     const savedTasks = localStorage.getItem('nexus_user_tasks');
     const savedTransactions = localStorage.getItem('nexus_user_transactions');
     const savedGoals = localStorage.getItem('nexus_user_goals');
-    const savedLimit = localStorage.getItem('nexus_monthly_limit');
     const savedReserve = localStorage.getItem('nexus_initial_reserve');
-    
-    if (savedLimit) setMonthlyLimit(Number(savedLimit));
     if (savedReserve) setInitialReserve(Number(savedReserve));
-
     if (savedName) {
       setUserName(savedName);
       setIsOnboarding(false);
@@ -191,10 +176,9 @@ export const App: React.FC = () => {
       localStorage.setItem('nexus_user_tasks', JSON.stringify(tasks));
       localStorage.setItem('nexus_user_transactions', JSON.stringify(transactions));
       localStorage.setItem('nexus_user_goals', JSON.stringify(goals));
-      localStorage.setItem('nexus_monthly_limit', monthlyLimit.toString());
       localStorage.setItem('nexus_initial_reserve', initialReserve.toString());
     }
-  }, [stats, tasks, transactions, goals, monthlyLimit, initialReserve, isOnboarding, isLoaded, userName]);
+  }, [stats, tasks, transactions, goals, initialReserve, isOnboarding, isLoaded, userName]);
 
   const changeMonth = (offset: number) => {
     setViewDate(prev => {
@@ -220,23 +204,14 @@ export const App: React.FC = () => {
       description: description,
     };
     setTransactions(prev => [newTransaction, ...prev]);
-    setStats(prev => ({
-      ...prev,
-      balance: prev.balance + amount,
-    }));
+    setStats(prev => ({ ...prev, balance: prev.balance + amount }));
   };
 
   const handleAddManualTransaction = () => {
     if (!newTransDesc || !newTransAmount) return;
     const amountValue = parseCurrencyToNumber(newTransAmount);
     if (isNaN(amountValue)) return;
-
-    handleAdjustBalance(
-      newTransType === 'REVENUE' ? amountValue : -amountValue,
-      newTransDesc,
-      newTransCategory
-    );
-
+    handleAdjustBalance(newTransType === 'REVENUE' ? amountValue : -amountValue, newTransDesc, newTransCategory);
     setNewTransDesc('');
     setNewTransAmount('');
     triggerFireworks(newTransType === 'REVENUE' ? '#10b981' : '#f43f5e');
@@ -251,10 +226,6 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleDeleteTransaction = (id: string) => {
-    setTransactions(prev => prev.filter(item => item.id !== id));
-  };
-
   const toggleTask = (id: string) => {
     setTasks(prev => prev.map(t => {
       if (t.id === id && !t.completed) {
@@ -264,6 +235,43 @@ export const App: React.FC = () => {
       }
       return t;
     }));
+  };
+
+  const handleAddTask = async () => {
+    if (!newTaskTitle.trim()) return;
+    const emoji = await suggestEmoji(newTaskTitle);
+    const newTask: Task = {
+      id: Date.now().toString(),
+      title: newTaskTitle,
+      priority: Priority.MEDIUM,
+      completed: false,
+      xpValue: 20,
+      emoji: emoji
+    };
+    setTasks(prev => [newTask, ...prev]);
+    setNewTaskTitle('');
+    triggerFireworks();
+  };
+
+  const handleAddGoal = async () => {
+    const title = prompt("Qual sua meta estratégica?");
+    const targetInput = prompt("Qual o valor alvo numérico?");
+    if (!title || !targetInput) return;
+    const target = parseFloat(targetInput);
+    if (isNaN(target)) return alert("Valor inválido.");
+    
+    const emoji = await suggestEmoji(title);
+    const newGoal: Goal = {
+      id: Date.now().toString(),
+      title: title,
+      target: target,
+      current: 0,
+      unit: 'un',
+      completed: false,
+      emoji: emoji
+    };
+    setGoals(prev => [...prev, newGoal]);
+    triggerFireworks('#d4af37');
   };
 
   const handleUpdateGoal = (id: string, amount: number) => {
@@ -336,20 +344,31 @@ export const App: React.FC = () => {
             <VWalletLogo className="w-24 h-24 mx-auto mb-2" />
             <h1 className="text-4xl text-chique font-bold">VWallet</h1>
           </div>
-          <div className="space-y-8">
-            <input 
-              type="text" 
-              placeholder="Identifique-se" 
-              value={userName} 
-              onChange={e => setUserName(e.target.value)}
-              className="w-full bg-black border-b-2 border-neutral-800 focus:border-[#d4af37] p-4 text-xl font-medium text-center outline-none"
-            />
-            {onboardingError && <p className="text-red-500 text-center font-medium">{onboardingError}</p>}
+          <div className="space-y-4">
+             <p className="text-[10px] text-neutral-500 uppercase tracking-widest text-center">Informe seu Saldo Inicial</p>
+             <input 
+               type="text" 
+               placeholder="R$ 0,00" 
+               value={tempBalance}
+               onChange={e => setTempBalance(formatAsCurrencyInput(e.target.value))}
+               className="w-full bg-black border-b-2 border-neutral-800 focus:border-[#d4af37] p-4 text-3xl font-bold text-center outline-none"
+             />
+          </div>
+          <div className="space-y-4">
+             <p className="text-[10px] text-neutral-500 uppercase tracking-widest text-center">Seu Nome</p>
+             <input 
+               type="text" 
+               placeholder="Identifique-se" 
+               value={userName} 
+               onChange={e => setUserName(e.target.value)}
+               className="w-full bg-black border-b-2 border-neutral-800 focus:border-[#d4af37] p-4 text-xl font-medium text-center outline-none"
+             />
           </div>
           <button 
-            onClick={() => {
-              if (!userName.trim()) return setOnboardingError('Identificação mandatória.');
-              setIsOnboarding(false);
+            onClick={() => { 
+              if (!userName.trim()) return; 
+              setInitialReserve(parseCurrencyToNumber(tempBalance));
+              setIsOnboarding(false); 
             }}
             className="btn-modern w-full py-6 bg-gradient-to-r from-[#b8860b] to-[#d4af37] text-black font-bold rounded-full shadow-2xl uppercase tracking-wider"
           >
@@ -385,15 +404,8 @@ export const App: React.FC = () => {
               {item.label}
             </button>
           ))}
-          {/* Botão Nero Sempre Visível no Desktop */}
-          <button
-            onClick={() => setIsAiOpen(true)}
-            className={`w-full flex items-center gap-5 px-8 py-5 rounded-2xl uppercase text-[10px] tracking-[0.25em] font-bold transition-all mt-10 border border-[#d4af37]/20 ${
-              isAiOpen ? 'bg-[#d4af37] text-black' : 'text-[#d4af37] hover:bg-[#d4af37]/10'
-            }`}
-          >
-            <Bot size={16} />
-            Chat Nero
+          <button onClick={() => setIsAiOpen(true)} className={`w-full flex items-center gap-5 px-8 py-5 rounded-2xl uppercase text-[10px] tracking-[0.25em] font-bold transition-all mt-10 border border-[#d4af37]/20 ${isAiOpen ? 'bg-[#d4af37] text-black' : 'text-[#d4af37] hover:bg-[#d4af37]/10'}`}>
+            <Bot size={16} /> Nero
           </button>
         </nav>
       </aside>
@@ -404,13 +416,9 @@ export const App: React.FC = () => {
             <header className="flex justify-between items-start gap-8">
               <div className="space-y-4">
                 <h2 className="text-4xl lg:text-6xl font-bold tracking-tight">Olá, <span className="text-[#d4af37] uppercase">{userName}</span></h2>
-                <p className="text-[10px] text-neutral-600 uppercase tracking-[0.6em] font-medium">
-                  {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
-                </p>
+                <p className="text-[10px] text-neutral-600 uppercase tracking-[0.6em] font-medium">{new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())}</p>
               </div>
-              <button onClick={() => setIsAiOpen(true)} className="btn-modern p-6 bg-neutral-900 border border-[#d4af37]/20 text-white rounded-full font-bold uppercase text-[11px] tracking-[0.35em] shadow-xl">
-                <Bot size={24} />
-              </button>
+              <button onClick={() => setIsAiOpen(true)} className="btn-modern p-6 bg-neutral-900 border border-[#d4af37]/20 text-white rounded-full font-bold shadow-xl"><Bot size={24} /></button>
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
@@ -448,23 +456,8 @@ export const App: React.FC = () => {
               </Card>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-neutral-950 border border-emerald-900/20 rounded-[2rem] p-8 shadow-xl">
-                 <p className="text-[10px] text-emerald-500/60 font-medium uppercase tracking-widest mb-2">Entradas Mensais</p>
-                 <h3 className="text-2xl font-semibold text-emerald-500">R$ {monthlyStats.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
-              </div>
-              <div className="bg-neutral-950 border border-rose-900/20 rounded-[2rem] p-8 shadow-xl">
-                 <p className="text-[10px] text-rose-500/60 font-medium uppercase tracking-widest mb-2">Saídas Mensais</p>
-                 <h3 className="text-2xl font-semibold text-rose-500">R$ {monthlyStats.expenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
-              </div>
-              <div className="bg-neutral-950 border border-neutral-800 rounded-[2rem] p-8 shadow-xl">
-                 <p className="text-[10px] text-neutral-600 font-medium uppercase tracking-widest mb-2">Saldo do Mês</p>
-                 <h3 className="text-2xl font-semibold text-white">R$ {monthlyStats.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
-              </div>
-            </div>
-
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
-              <div className="bg-neutral-950 border border-neutral-900 rounded-[3rem] p-12 flex flex-col shadow-2xl">
+              <Card className="bg-neutral-950 border border-neutral-900 rounded-[3rem] p-12 flex flex-col shadow-2xl">
                 <h3 className="text-xs font-semibold uppercase tracking-[0.3em] text-white mb-10 border-b border-neutral-900 pb-6 opacity-60">Diretrizes do Dia</h3>
                 <div className="space-y-8 flex-1">
                   {tasks.slice(0, 4).map((task) => (
@@ -473,13 +466,13 @@ export const App: React.FC = () => {
                         {task.completed && <Check size={16} className="text-black" strokeWidth={3} />}
                       </div>
                       <span className={`text-xl font-normal tracking-tight transition-all uppercase ${task.completed ? 'text-neutral-700 line-through' : 'text-neutral-200'}`}>
+                        {task.emoji && <span className="mr-3">{task.emoji}</span>}
                         {task.title}
                       </span>
                     </div>
                   ))}
                 </div>
-              </div>
-
+              </Card>
               <div className="bg-neutral-950 border border-neutral-900 rounded-[3rem] p-12 flex flex-col items-center justify-center relative shadow-2xl overflow-hidden">
                 <RadarScoreChart data={[
                   { label: 'Foco', value: totalCount > 0 ? (completedCount / totalCount) * 100 : 0, color: '#d4af37' },
@@ -502,57 +495,12 @@ export const App: React.FC = () => {
                 <button onClick={() => changeMonth(1)} className="p-4 bg-neutral-900/50 rounded-2xl border border-neutral-800"><ChevronRight size={24} /></button>
               </div>
             </header>
-
-            <Card className="bg-neutral-950 border border-neutral-900 rounded-[3rem] p-12 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-12">
-              <div className="flex items-center gap-8">
-                 <div className="w-16 h-16 bg-[#d4af37]/10 rounded-full flex items-center justify-center border border-[#d4af37]/10">
-                    <Wallet className="text-[#d4af37]" size={28} />
-                 </div>
-                 <div>
-                    <p className="text-[11px] text-neutral-600 font-medium uppercase tracking-[0.4em] mb-2">BALANÇO PATRIMONIAL TOTAL</p>
-                    {isEditingBalance ? (
-                      <div className="flex items-center gap-4">
-                        <input 
-                          type="text" 
-                          value={tempBalance}
-                          onChange={e => setTempBalance(formatAsCurrencyInput(e.target.value))}
-                          className="bg-black border-b-2 border-[#d4af37] text-3xl font-semibold w-56 outline-none"
-                          autoFocus
-                        />
-                        <button onClick={handleUpdateTotalBalance} className="p-3 bg-[#d4af37] text-black rounded-full"><Save size={18}/></button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-4">
-                        <h3 className="text-5xl font-bold text-white">R$ {totalEquity.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
-                        <button onClick={() => { setTempBalance(totalEquity.toLocaleString('pt-BR', { minimumFractionDigits: 2 })); setIsEditingBalance(true); }} className="text-neutral-600 hover:text-[#d4af37]"><Pencil size={20}/></button>
-                      </div>
-                    )}
-                 </div>
-              </div>
-            </Card>
-
             <Card className="bg-neutral-950 border-neutral-900 rounded-[3rem] p-12 shadow-2xl space-y-8">
-              <h3 className="text-[11px] font-medium uppercase tracking-[0.5em] text-[#d4af37]">Novo Lançamento Manual</h3>
+              <h3 className="text-[11px] font-bold uppercase tracking-[0.5em] text-[#d4af37]">Gastos e Entradas</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <input 
-                  type="text" 
-                  placeholder="Descrição" 
-                  value={newTransDesc}
-                  onChange={e => setNewTransDesc(e.target.value)}
-                  className="w-full bg-black border border-neutral-800 p-4 rounded-xl outline-none focus:border-[#d4af37]"
-                />
-                <input 
-                  type="text" 
-                  placeholder="Valor R$ 0,00" 
-                  value={newTransAmount}
-                  onChange={e => setNewTransAmount(formatAsCurrencyInput(e.target.value))}
-                  className="w-full bg-black border border-neutral-800 p-4 rounded-xl outline-none focus:border-[#d4af37]"
-                />
-                <select 
-                  value={newTransCategory}
-                  onChange={e => setNewTransCategory(e.target.value)}
-                  className="w-full bg-black border border-neutral-800 p-4 rounded-xl outline-none focus:border-[#d4af37]"
-                >
+                <input type="text" placeholder="Descrição" value={newTransDesc} onChange={e => setNewTransDesc(e.target.value)} className="w-full bg-black border border-neutral-800 p-4 rounded-xl outline-none focus:border-[#d4af37]" />
+                <input type="text" placeholder="Valor R$ 0,00" value={newTransAmount} onChange={e => setNewTransAmount(formatAsCurrencyInput(e.target.value))} className="w-full bg-black border border-neutral-800 p-4 rounded-xl outline-none focus:border-[#d4af37]" />
+                <select value={newTransCategory} onChange={e => setNewTransCategory(e.target.value)} className="w-full bg-black border border-neutral-800 p-4 rounded-xl outline-none focus:border-[#d4af37]">
                   {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
                 <div className="flex gap-2">
@@ -562,29 +510,21 @@ export const App: React.FC = () => {
               </div>
               <button onClick={handleAddManualTransaction} className="btn-modern w-full py-6 bg-gradient-to-r from-[#b8860b] to-[#d4af37] text-black rounded-2xl font-bold uppercase tracking-[0.4em] text-[11px]">Registrar Lançamento</button>
             </Card>
-
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-               <div className="bg-neutral-950 border border-neutral-900 rounded-[3rem] p-12 shadow-3xl">
-                 <CategoryExpensesChart transactions={currentMonthTransactions} />
-               </div>
+               <div className="bg-neutral-950 border border-neutral-900 rounded-[3rem] p-12 shadow-3xl"><CategoryExpensesChart transactions={currentMonthTransactions} /></div>
                <Card className="bg-neutral-950 border border-neutral-900 rounded-[3rem] p-12 shadow-3xl h-[500px] flex flex-col">
                  <h3 className="text-[11px] font-medium uppercase tracking-[0.4em] text-white mb-8 border-b border-neutral-900 pb-4">Histórico Recente</h3>
                  <div className="flex-1 overflow-y-auto space-y-4 no-scrollbar">
                    {currentMonthTransactions.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(t => (
                      <div key={t.id} className="flex items-center justify-between p-5 bg-black/40 border border-neutral-900 rounded-2xl group transition-all">
                        <div className="flex items-center gap-4">
-                         <div className={`p-3 rounded-xl ${t.type === 'REVENUE' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
-                           {t.type === 'REVENUE' ? <ArrowUpCircle size={20} /> : <ArrowDownCircle size={20} />}
-                         </div>
+                         <div className={`p-3 rounded-xl ${t.type === 'REVENUE' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>{t.type === 'REVENUE' ? <ArrowUpCircle size={20} /> : <ArrowDownCircle size={20} />}</div>
                          <div>
                            <p className="text-sm font-medium text-white uppercase">{t.description}</p>
                            <p className="text-[10px] text-neutral-600 uppercase tracking-widest">{t.category} • {new Date(t.date).toLocaleDateString('pt-BR')}</p>
                          </div>
                        </div>
-                       <div className="flex items-center gap-5">
-                         <p className={`text-sm font-semibold ${t.type === 'REVENUE' ? 'text-emerald-500' : 'text-rose-500'}`}>R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                         <button onClick={() => handleDeleteTransaction(t.id)} className="opacity-0 group-hover:opacity-100 p-2 text-neutral-700 hover:text-rose-500 transition-all"><Trash2 size={16} /></button>
-                       </div>
+                       <p className={`text-sm font-semibold ${t.type === 'REVENUE' ? 'text-emerald-500' : 'text-rose-500'}`}>R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                      </div>
                    ))}
                  </div>
@@ -595,26 +535,17 @@ export const App: React.FC = () => {
 
         {activeTab === 'tasks' && (
           <div className="space-y-12 pb-24">
-             <header><h2 className="text-4xl font-bold tracking-tight uppercase">Performances</h2></header>
+             <header><h2 className="text-4xl font-bold tracking-tight uppercase">Tarefas diárias</h2></header>
             <Card className="rounded-[3rem] p-12 bg-neutral-950 border-neutral-900 shadow-2xl">
               <div className="flex gap-6 mb-12">
-                <input 
-                  type="text" 
-                  placeholder="Defina sua missão..." 
-                  className="flex-1 bg-black/50 border-b-2 border-neutral-800 p-6 text-xl outline-none focus:border-[#d4af37]" 
-                  value={newTaskTitle} 
-                  onChange={e => setNewTaskTitle(e.target.value)} 
-                  onKeyDown={e => { if (e.key === 'Enter' && newTaskTitle.trim()) { setTasks(prev => [{ id: Date.now().toString(), title: newTaskTitle, priority: Priority.MEDIUM, completed: false, xpValue: 20 }, ...prev]); setNewTaskTitle(''); } }} 
-                />
-                <button onClick={() => { if (newTaskTitle.trim()) { setTasks(prev => [{ id: Date.now().toString(), title: newTaskTitle, priority: Priority.MEDIUM, completed: false, xpValue: 20 }, ...prev]); setNewTaskTitle(''); } }} className="p-6 bg-[#d4af37] text-black rounded-3xl"><Plus size={32} strokeWidth={3} /></button>
+                <input type="text" placeholder="Defina sua nova Tarefa..." className="flex-1 bg-black/50 border-b-2 border-neutral-800 p-6 text-xl outline-none focus:border-[#d4af37]" value={newTaskTitle} onChange={e => setNewTaskTitle(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddTask()} />
+                <button onClick={handleAddTask} className="p-6 bg-[#d4af37] text-black rounded-3xl"><Plus size={32} strokeWidth={3} /></button>
               </div>
               <div className="space-y-6">
                 {tasks.map(task => (
                   <div key={task.id} onClick={() => toggleTask(task.id)} className={`p-8 border rounded-[2rem] flex items-center gap-8 cursor-pointer transition-all ${task.completed ? 'opacity-30' : 'border-neutral-900 hover:border-[#d4af37]/40 bg-neutral-950/50'}`}>
-                    <div className={`w-8 h-8 rounded-full border-4 flex items-center justify-center ${task.completed ? 'bg-[#d4af37] border-[#d4af37]' : 'border-neutral-800'}`}>
-                      {task.completed && <Check size={16} className="text-black" strokeWidth={3} />}
-                    </div>
-                    <span className={`text-xl uppercase flex-1 ${task.completed ? 'line-through text-neutral-600' : ''}`}>{task.title}</span>
+                    <div className={`w-8 h-8 rounded-full border-4 flex items-center justify-center ${task.completed ? 'bg-[#d4af37] border-[#d4af37]' : 'border-neutral-800'}`}>{task.completed && <Check size={16} className="text-black" strokeWidth={3} />}</div>
+                    <span className={`text-xl uppercase flex-1 ${task.completed ? 'line-through text-neutral-600' : ''}`}>{task.emoji && <span className="mr-3">{task.emoji}</span>}{task.title}</span>
                   </div>
                 ))}
               </div>
@@ -626,56 +557,40 @@ export const App: React.FC = () => {
            <div className="space-y-12 pb-24">
              <header><h2 className="text-4xl font-bold tracking-tight uppercase">Metas</h2></header>
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <div className="bg-neutral-950 border border-neutral-900 rounded-[3rem] p-10 shadow-xl">
-                  <GoalProgressCard activeCount={activeGoalsCount} completedCount={completedGoalsCount} />
-                </div>
+                <div className="bg-neutral-950 border border-neutral-900 rounded-[3rem] p-10 shadow-xl"><GoalProgressCard activeCount={activeGoalsCount} completedCount={completedGoalsCount} /></div>
                 {goals.map(goal => (
                   <Card key={goal.id} className="relative p-10 bg-neutral-950 border-neutral-900 rounded-[3rem] group shadow-xl">
-                    <h4 className="text-xl font-semibold uppercase mb-2">{goal.title}</h4>
-                    <p className="text-[10px] text-neutral-600 font-medium uppercase mb-8">{goal.current} / {goal.target} {goal.unit}</p>
-                    <div className="h-3 bg-neutral-900 rounded-full overflow-hidden mb-8 border border-neutral-800">
-                      <div className="h-full bg-[#d4af37] transition-all duration-700" style={{ width: `${(goal.current / goal.target) * 100}%` }} />
-                    </div>
+                    <h4 className="text-xl font-semibold uppercase mb-2">{goal.emoji && <span className="mr-2">{goal.emoji}</span>}{goal.title}</h4>
+                    <p className="text-[10px] text-neutral-600 font-medium uppercase mb-8">{goal.current} / {goal.target.toLocaleString('pt-BR')} {goal.unit}</p>
+                    <div className="h-3 bg-neutral-900 rounded-full overflow-hidden mb-8 border border-neutral-800"><div className="h-full bg-[#d4af37] transition-all duration-700" style={{ width: `${(goal.current / goal.target) * 100}%` }} /></div>
                     <button onClick={() => handleUpdateGoal(goal.id, 1)} className="w-full py-4 bg-neutral-900 text-white rounded-2xl font-bold uppercase text-[10px] border border-neutral-800">+ Incrementar</button>
+                    <button onClick={() => setGoals(prev => prev.filter(g => g.id !== goal.id))} className="absolute top-6 right-6 p-2 text-neutral-800 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={16} /></button>
                   </Card>
                 ))}
-                <button onClick={() => {
-                  const title = prompt("Qual sua meta?");
-                  const target = prompt("Qual o valor alvo?");
-                  if (title && target) setGoals(prev => [...prev, { id: Date.now().toString(), title, target: Number(target), current: 0, unit: 'un', completed: false }]);
-                }} className="border-2 border-dashed border-neutral-900 rounded-[3rem] p-10 flex flex-col items-center justify-center gap-4 text-neutral-800 hover:text-[#d4af37] hover:border-[#d4af37] transition-all">
-                   <Plus size={40}/>
-                   <span className="text-[11px] font-medium uppercase tracking-widest">Nova Meta Estratégica</span>
+                <button onClick={handleAddGoal} className="border-2 border-dashed border-neutral-900 rounded-[3rem] p-10 flex flex-col items-center justify-center gap-4 text-neutral-800 hover:text-[#d4af37] hover:border-[#d4af37] transition-all">
+                   <Plus size={40}/><span className="text-[11px] font-medium uppercase tracking-widest">Nova Meta Estratégica</span>
                 </button>
              </div>
            </div>
         )}
       </main>
 
-      {/* CHAT NERO */}
       {isAiOpen && (
         <div className="fixed inset-0 lg:inset-auto lg:bottom-12 lg:right-12 lg:w-[480px] lg:h-[840px] bg-black border border-neutral-900 lg:rounded-[3.5rem] flex flex-col z-[500] shadow-[0_40px_100px_rgba(0,0,0,1)] overflow-hidden animate-in slide-in-from-bottom-12 duration-500">
           <div className="p-10 border-b border-neutral-900 flex justify-between items-center bg-black/95 backdrop-blur-xl">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full border-2 border-[#d4af37]/50 overflow-hidden shadow-[0_0_15px_rgba(212,175,55,0.3)] bg-neutral-900">
-                <img src={NERO_AVATAR} alt="Nero Pet" className="w-full h-full object-cover" />
+              <div className="w-12 h-12 rounded-full border-2 border-[#d4af37]/50 overflow-hidden bg-neutral-900 shadow-[0_0_15px_rgba(212,175,55,0.3)]"><img src={NERO_AVATAR} alt="Nero" className="w-full h-full object-cover" /></div>
+              <div>
+                <span className="uppercase text-[14px] font-bold text-[#d4af37] tracking-[0.3em] block">NERO</span>
+                <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" /><span className="text-[9px] text-neutral-400 uppercase font-bold tracking-widest">Online</span></div>
               </div>
-              <span className="uppercase text-[14px] font-bold text-[#d4af37] tracking-[0.3em]">NERO AI</span>
             </div>
             <button onClick={() => setIsAiOpen(false)} className="text-neutral-600 hover:text-white transition-colors bg-neutral-900 p-3 rounded-full"><X size={20} /></button>
           </div>
-          <div 
-            className="flex-1 overflow-y-auto p-10 space-y-8 no-scrollbar"
-            style={{ background: 'radial-gradient(circle at 50% 10%, #660000 0%, #000000 80%)' }}
-          >
+          <div className="flex-1 overflow-y-auto p-10 space-y-8 no-scrollbar" style={{ background: 'radial-gradient(circle at 50% 10%, #660000 0%, #000000 80%)' }}>
             {messages.length === 0 && (
               <div className="text-center py-32 space-y-10 animate-in fade-in duration-1000">
-                <div className="relative inline-block">
-                  <div className="w-32 h-32 mx-auto rounded-full border-4 border-[#d4af37]/20 overflow-hidden opacity-60 hover:opacity-100 transition-opacity shadow-2xl bg-neutral-900">
-                    <img src={NERO_AVATAR} alt="Pet Nero" className="w-full h-full object-cover" />
-                  </div>
-                  <Sparkles className="absolute -top-2 -right-2 text-[#d4af37] animate-pulse" />
-                </div>
+                <div className="w-32 h-32 mx-auto rounded-full border-4 border-[#d4af37]/20 overflow-hidden bg-neutral-900 shadow-2xl"><img src={NERO_AVATAR} alt="Nero" className="w-full h-full object-cover" /></div>
                 <p className="text-sm text-neutral-500 font-normal italic px-8 opacity-60">"Nero, registre um gasto de R$ 50 com almoço"</p>
               </div>
             )}
@@ -688,32 +603,20 @@ export const App: React.FC = () => {
           </div>
           <div className="p-10 border-t border-neutral-900 space-y-8 bg-neutral-950/95 pb-24 lg:pb-16 backdrop-blur-xl">
             <div className="flex gap-5 items-center">
-              <input type="text" placeholder="Comande o Nero..." value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAiChat(chatInput)} className="flex-1 bg-black border border-neutral-800 p-6 rounded-3xl text-sm outline-none focus:border-[#d4af37] shadow-inner" />
+              <input type="text" placeholder="Comande o Nero..." value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAiChat(chatInput)} className="flex-1 bg-black border border-neutral-800 p-6 rounded-3xl text-sm outline-none focus:border-[#d4af37]" />
               <button onMouseDown={startRecording} onMouseUp={stopRecording} className={`p-6 rounded-3xl transition-all shadow-xl ${isRecording ? 'bg-rose-700 text-white animate-pulse' : 'bg-neutral-900 text-neutral-600'}`}><Mic size={30} /></button>
-              <button onClick={() => handleAiChat(chatInput)} className="p-6 bg-[#d4af37] text-black rounded-3xl shadow-xl transition-all active:scale-90"><Send size={30} strokeWidth={3} /></button>
+              <button onClick={() => handleAiChat(chatInput)} className="p-6 bg-[#d4af37] text-black rounded-3xl shadow-xl active:scale-90"><Send size={30} strokeWidth={3} /></button>
             </div>
           </div>
         </div>
       )}
 
-      {/* NAVEGAÇÃO MOBILE */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-24 bg-black/95 backdrop-blur-3xl border-t border-neutral-900 flex items-center justify-around px-6 pb-6 z-[400] shadow-[0_-15px_40px_rgba(0,0,0,0.9)]">
-        <button onClick={() => setActiveTab('dashboard')} className={`p-4 rounded-full transition-all ${activeTab === 'dashboard' ? 'bg-[#d4af37] text-black' : 'text-neutral-700'}`}>
-          <LayoutDashboard size={26} />
-        </button>
-        <button onClick={() => setActiveTab('finances')} className={`p-4 rounded-full transition-all ${activeTab === 'finances' ? 'bg-[#d4af37] text-black' : 'text-neutral-700'}`}>
-          <Wallet size={26} />
-        </button>
-        {/* Botão AI Central no Mobile */}
-        <button onClick={() => setIsAiOpen(true)} className={`p-5 rounded-full transition-all border-2 border-[#d4af37]/20 ${isAiOpen ? 'bg-[#d4af37] text-black shadow-[0_0_20px_rgba(212,175,55,0.4)]' : 'bg-neutral-900 text-[#d4af37]'}`}>
-          <Bot size={30} />
-        </button>
-        <button onClick={() => setActiveTab('tasks')} className={`p-4 rounded-full transition-all ${activeTab === 'tasks' ? 'bg-[#d4af37] text-black' : 'text-neutral-700'}`}>
-          <CheckSquare size={26} />
-        </button>
-        <button onClick={() => setActiveTab('goals')} className={`p-4 rounded-full transition-all ${activeTab === 'goals' ? 'bg-[#d4af37] text-black' : 'text-neutral-700'}`}>
-          <Flag size={26} />
-        </button>
+        <button onClick={() => setActiveTab('dashboard')} className={`p-4 rounded-full transition-all ${activeTab === 'dashboard' ? 'bg-[#d4af37] text-black shadow-lg' : 'text-neutral-700'}`}><LayoutDashboard size={26} /></button>
+        <button onClick={() => setActiveTab('finances')} className={`p-4 rounded-full transition-all ${activeTab === 'finances' ? 'bg-[#d4af37] text-black shadow-lg' : 'text-neutral-700'}`}><Wallet size={26} /></button>
+        <button onClick={() => setIsAiOpen(true)} className={`p-5 rounded-full transition-all border-2 border-[#d4af37]/20 ${isAiOpen ? 'bg-[#d4af37] text-black shadow-[0_0_20px_rgba(212,175,55,0.4)]' : 'bg-neutral-900 text-[#d4af37]'}`}><Bot size={30} /></button>
+        <button onClick={() => setActiveTab('tasks')} className={`p-4 rounded-full transition-all ${activeTab === 'tasks' ? 'bg-[#d4af37] text-black shadow-lg' : 'text-neutral-700'}`}><CheckSquare size={26} /></button>
+        <button onClick={() => setActiveTab('goals')} className={`p-4 rounded-full transition-all ${activeTab === 'goals' ? 'bg-[#d4af37] text-black shadow-lg' : 'text-neutral-700'}`}><Flag size={26} /></button>
       </nav>
     </div>
   );
