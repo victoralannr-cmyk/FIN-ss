@@ -590,7 +590,7 @@ export const App: React.FC = () => {
              <header><h2 className="text-3xl lg:text-4xl font-bold tracking-tight uppercase text-[#d4af37]">Metas</h2></header>
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
                 <div className="bg-neutral-950 border border-neutral-900 rounded-[2.5rem] lg:rounded-[3rem] p-8 lg:p-10 shadow-xl">
-                  <GoalProgressCard activeCount={activeGoalsCount} completedCount={completedCount} />
+                  <GoalProgressCard activeCount={activeGoalsCount} completedCount={completedGoalsCount} />
                 </div>
                 
                 {goals.map(goal => (
