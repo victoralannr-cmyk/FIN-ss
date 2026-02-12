@@ -704,7 +704,7 @@ export const App: React.FC = () => {
         </div>
       )}
 
-      {/* MOBILE NAVIGATION BAR WITH LABELS */}
+      {/* MOBILE NAVIGATION BAR WITH LABELS - DEFINITELY CORRECTED */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-24 bg-black/95 backdrop-blur-3xl border-t border-neutral-900 flex items-center justify-around px-2 pb-6 z-[400] shadow-[0_-15px_40px_rgba(0,0,0,0.9)]">
         <button 
           onClick={() => setActiveTab('dashboard')} 
