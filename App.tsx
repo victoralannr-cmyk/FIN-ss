@@ -708,18 +708,18 @@ export const App: React.FC = () => {
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-24 bg-black/95 backdrop-blur-3xl border-t border-neutral-900 flex items-center justify-around px-2 pb-6 z-[400] shadow-[0_-15px_40px_rgba(0,0,0,0.9)]">
         <button 
           onClick={() => setActiveTab('dashboard')} 
-          className={`flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all min-w-[60px] ${activeTab === 'dashboard' ? 'text-[#d4af37]' : 'text-neutral-600'}`}
+          className={`flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all min-w-[64px] ${activeTab === 'dashboard' ? 'text-[#d4af37]' : 'text-neutral-600'}`}
         >
           <LayoutDashboard className="w-5 h-5" />
-          <span className="text-[8px] font-black uppercase tracking-widest">Painel</span>
+          <span className="text-[9px] font-black uppercase tracking-widest">Painel</span>
         </button>
         
         <button 
           onClick={() => setActiveTab('finances')} 
-          className={`flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all min-w-[60px] ${activeTab === 'finances' ? 'text-[#d4af37]' : 'text-neutral-600'}`}
+          className={`flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all min-w-[64px] ${activeTab === 'finances' ? 'text-[#d4af37]' : 'text-neutral-600'}`}
         >
           <Wallet className="w-5 h-5" />
-          <span className="text-[8px] font-black uppercase tracking-widest">Contas</span>
+          <span className="text-[9px] font-black uppercase tracking-widest">Contas</span>
         </button>
         
         <button 
@@ -727,23 +727,23 @@ export const App: React.FC = () => {
           className={`flex flex-col items-center gap-1.5 p-3 rounded-2xl transition-all border-2 border-[#d4af37]/20 -translate-y-4 shadow-2xl ${isAiOpen ? 'bg-[#d4af37] text-black border-[#d4af37]' : 'bg-neutral-900 text-[#d4af37]'}`}
         >
           <Bot className="w-6 h-6" />
-          <span className="text-[9px] font-black uppercase tracking-widest">Nero</span>
+          <span className="text-[10px] font-black uppercase tracking-widest">Nero</span>
         </button>
         
         <button 
           onClick={() => setActiveTab('tasks')} 
-          className={`flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all min-w-[60px] ${activeTab === 'tasks' ? 'text-[#d4af37]' : 'text-neutral-600'}`}
+          className={`flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all min-w-[64px] ${activeTab === 'tasks' ? 'text-[#d4af37]' : 'text-neutral-600'}`}
         >
           <CheckSquare className="w-5 h-5" />
-          <span className="text-[8px] font-black uppercase tracking-widest">Tarefas</span>
+          <span className="text-[9px] font-black uppercase tracking-widest">Tarefas</span>
         </button>
         
         <button 
           onClick={() => setActiveTab('goals')} 
-          className={`flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all min-w-[60px] ${activeTab === 'goals' ? 'text-[#d4af37]' : 'text-neutral-600'}`}
+          className={`flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all min-w-[64px] ${activeTab === 'goals' ? 'text-[#d4af37]' : 'text-neutral-600'}`}
         >
           <Flag className="w-5 h-5" />
-          <span className="text-[8px] font-black uppercase tracking-widest">Metas</span>
+          <span className="text-[9px] font-black uppercase tracking-widest">Metas</span>
         </button>
       </nav>
     </div>
