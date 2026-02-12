@@ -422,7 +422,7 @@ export const App: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-10">
               <Card className="relative overflow-hidden p-8 lg:p-12 bg-neutral-950 border-neutral-900 shadow-2xl group rounded-[2.5rem]">
-                <Wallet className="absolute -right-8 -top-8 text-neutral-800 opacity-20 rotate-12" size={120} />
+                <Wallet className="absolute -right-8 -top-8 text-neutral-800 opacity-20 rotate-12 w-24 h-24 lg:w-32 lg:h-32" />
                 <h4 className="text-base lg:text-lg text-[#d4af37] uppercase tracking-[0.25em] mb-4 lg:mb-6 font-black drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">Balanço Patrimonial Total</h4>
                 <div className="flex items-center gap-5">
                    {isEditingBalance ? (
