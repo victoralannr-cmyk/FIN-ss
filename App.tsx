@@ -395,12 +395,12 @@ export const App: React.FC = () => {
                 activeTab === item.id ? 'bg-[#d4af37] text-black shadow-xl' : 'text-neutral-500 hover:text-white'
               }`}
             >
-              <item.icon size={16} />
+              <item.icon className="w-4 h-4" />
               {item.label}
             </button>
           ))}
           <button onClick={() => setIsAiOpen(true)} className={`w-full flex items-center gap-5 px-8 py-5 rounded-2xl uppercase text-[10px] tracking-[0.25em] font-bold transition-all mt-10 border border-[#d4af37]/20 ${isAiOpen ? 'bg-[#d4af37] text-black' : 'text-[#d4af37] hover:bg-[#d4af37]/10'}`}>
-            <Bot size={16} /> Nero
+            <Bot className="w-4 h-4" /> Nero
           </button>
         </nav>
       </aside>
@@ -416,7 +416,7 @@ export const App: React.FC = () => {
                 </p>
               </div>
               <button onClick={() => setIsAiOpen(true)} className="btn-modern p-5 lg:p-6 bg-neutral-900 border border-[#d4af37]/20 text-white rounded-full font-bold shadow-xl">
-                <Bot size={24} />
+                <Bot className="w-6 h-6" />
               </button>
             </header>
 
@@ -436,14 +436,14 @@ export const App: React.FC = () => {
                          onKeyDown={e => e.key === 'Enter' && handleUpdateTotalBalance()}
                        />
                        <button onClick={handleUpdateTotalBalance} className="p-3 bg-[#d4af37] text-black rounded-full">
-                         <Save size={18}/>
+                         <Save className="w-4 h-4"/>
                        </button>
                      </div>
                    ) : (
                      <>
                        <div className="text-3xl lg:text-5xl font-bold tracking-tighter text-white">R$ <AnimatedNumber value={totalEquity} /></div>
                        <button onClick={() => { setTempBalance(totalEquity.toLocaleString('pt-BR', { minimumFractionDigits: 2 })); setIsEditingBalance(true); }} className="p-3 lg:p-4 bg-neutral-900 rounded-full hover:text-[#d4af37] transition-colors">
-                         <Pencil size={18} />
+                         <Pencil className="w-4 h-4" />
                        </button>
                      </>
                    )}
@@ -469,7 +469,7 @@ export const App: React.FC = () => {
                     tasks.slice(0, 4).map((task) => (
                       <div key={task.id} onClick={() => toggleTask(task.id)} className="flex items-center gap-6 lg:gap-8 group cursor-pointer transition-all">
                         <div className={`w-6 h-6 lg:w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center shrink-0 ${task.completed ? 'bg-[#d4af37] border-[#d4af37]' : 'border-neutral-800 group-hover:border-neutral-500'}`}>
-                          {task.completed && <Check size={14} className="text-black" strokeWidth={3} />}
+                          {task.completed && <Check className="w-4 h-4 text-black" strokeWidth={3} />}
                         </div>
                         <span className={`text-lg lg:text-xl font-normal tracking-tight transition-all uppercase ${task.completed ? 'text-neutral-700 line-through' : 'text-neutral-200'}`}>
                           {task.emoji && <span className="mr-3">{task.emoji}</span>}
@@ -590,7 +590,7 @@ export const App: React.FC = () => {
              <header><h2 className="text-3xl lg:text-4xl font-bold tracking-tight uppercase text-[#d4af37]">Metas</h2></header>
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
                 <div className="bg-neutral-950 border border-neutral-900 rounded-[2.5rem] lg:rounded-[3rem] p-8 lg:p-10 shadow-xl">
-                  <GoalProgressCard activeCount={activeGoalsCount} completedCount={completedGoalsCount} />
+                  <GoalProgressCard activeCount={activeGoalsCount} completedCount={completedCount} />
                 </div>
                 
                 {goals.map(goal => (
@@ -697,7 +697,7 @@ export const App: React.FC = () => {
                 <Mic className="w-6 h-6" />
               </button>
               <button onClick={() => handleAiChat(chatInput)} className="p-4 lg:p-6 bg-[#d4af37] text-black rounded-[1.5rem] lg:rounded-3xl shadow-xl active:scale-90">
-                <Send className="w-6 h-6" strokeWidth={3} />
+                <Send className="w-6 h-6" />
               </button>
             </div>
           </div>
