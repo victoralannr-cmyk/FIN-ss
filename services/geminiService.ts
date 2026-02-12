@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type, FunctionDeclaration } from "@google/genai";
 
 const controlTools: FunctionDeclaration[] = [
@@ -8,10 +7,10 @@ const controlTools: FunctionDeclaration[] = [
     parameters: {
       type: Type.OBJECT,
       properties: {
-        amount: { type: Type.NUMBER, description: 'O valor da transação.' },
-        type: { type: Type.STRING, description: 'O tipo da transação: REVENUE (receita) ou EXPENSE (despesa).' },
+        amount: { type: Type.NUMBER, description: 'O valor numérico da transação.' },
+        type: { type: Type.STRING, description: 'O tipo da transação: REVENUE (receita/entrada) ou EXPENSE (despesa/gasto).' },
         description: { type: Type.STRING, description: 'Breve descrição do que se trata.' },
-        category: { type: Type.STRING, description: 'Categoria específica conforme as diretrizes do sistema.' }
+        category: { type: Type.STRING, description: 'Categoria específica: Alimentação, Moradia, Transporte, Saúde, Lazer, Educação, Compras pessoais, Assinaturas e serviços, Impostos e taxas, Outros.' }
       },
       required: ['amount', 'type', 'description']
     }
@@ -36,7 +35,7 @@ export const suggestEmoji = async (text: string): Promise<string> => {
       model: 'gemini-3-flash-preview',
       contents: `Sugira apenas UM emoji que represente melhor este texto: "${text}"`,
       config: {
-        systemInstruction: "Você é um assistente minimalista. Retorne APENAS o caractere do emoji, nada mais.",
+        systemInstruction: "Você é um assistente minimalista da GESTORA DONTE. Retorne APENAS o caractere do emoji, nada mais.",
       }
     });
     return response.text?.trim() || '🎯';
@@ -58,16 +57,29 @@ export const processAICmd = async (message: string, audioBase64?: string) => {
     });
   }
   
-  contents.push({ text: message || "O usuário enviou um áudio." });
+  if (message) {
+    contents.push({ text: message });
+  } else if (audioBase64) {
+    contents.push({ text: "O usuário enviou um comando de voz. Processe-o." });
+  }
 
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: { parts: contents },
       config: {
-        systemInstruction: `Você é Nero, a inteligência central do VWallet. Sua comunicação deve ser eficiente e sofisticada.
-        Para transações, use add_transaction. 
-        Categorias: Alimentação, Moradia, Transporte, Saúde, Lazer, Educação, Compras pessoais, Assinaturas e serviços, Impostos e taxas, Outros.`,
+        systemInstruction: `Você é Nero, a inteligência central avançada da GESTORA DONTE. Sua missão é ser um assistente financeiro de elite, humano, sofisticado e proativo.
+
+DIRETRIZES DE COMPORTAMENTO:
+1. DETECÇÃO DE INTENÇÃO: Identifique se o usuário quer registrar um gasto, uma entrada, fazer uma pergunta ou apenas conversar.
+2. REGISTRO AUTOMÁTICO: Use a ferramenta 'add_transaction' sempre que detectar valores financeiros. Extraia: valor, tipo (REVENUE/EXPENSE), descrição e categoria.
+3. CATEGORIAS: Alimentação, Moradia, Transporte, Saúde, Lazer, Educação, Compras pessoais, Assinaturas e serviços, Impostos e taxas, Outros.
+4. PROATIVIDADE: Se faltar informação (como categoria), pergunte de forma curta e elegante.
+5. RESPOSTA: Confirme registros brevemente: "✅ Gasto de R$ [valor] registrado em [categoria]."
+6. TOM: Sofisticado, direto e útil. Nunca responda apenas "ok".
+7. VOZ: Pense na leitura em voz alta. Use frases fluidas e naturais.
+
+Exemplo de ação: Usuário diz "Gastei 50 reais no almoço" -> Chame 'add_transaction' com type=EXPENSE, amount=50, category=Alimentação e responda confirmando.`,
         tools: [{ functionDeclarations: controlTools }]
       }
     });
@@ -77,6 +89,7 @@ export const processAICmd = async (message: string, audioBase64?: string) => {
       functionCalls: response.functionCalls
     };
   } catch (error) {
-    return { text: "Erro na sincronização neural do Nero." };
+    console.error("Erro Nero:", error);
+    return { text: "Erro na sincronização neural do Nero. Por favor, tente novamente." };
   }
 };

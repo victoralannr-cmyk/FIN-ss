@@ -51,6 +51,7 @@ interface Goal {
   emoji?: string;
 }
 
+// Avatar do Nero atualizado conforme solicitação (Elefante)
 const NERO_AVATAR = "https://i.postimg.cc/cJCRJfCZ/Chat-GPT-Image-12-de-fev-de-2026-16-02-46-removebg-preview.png"; 
 
 // Logo GESTORA DONTE usando a imagem do elefante
@@ -296,6 +297,10 @@ export const App: React.FC = () => {
           const val = call.args.type === 'REVENUE' ? Number(call.args.amount) : -Number(call.args.amount);
           handleAdjustBalance(val, call.args.description, call.args.category || 'Outros');
         }
+        if (call.name === 'update_balance') {
+          const newVal = Number(call.args.amount);
+          setInitialReserve(newVal - monthlyStats.balance);
+        }
       });
     }
     setMessages(prev => [...prev, { role: 'ai', text: result.text || "Operação concluída pelo Nero." }]);
@@ -315,7 +320,7 @@ export const App: React.FC = () => {
         reader.readAsDataURL(audioBlob);
         reader.onloadend = async () => {
           const base64Audio = (reader.result as string).split(',')[1];
-          handleAiChat("Comando de áudio registrado.", base64Audio); 
+          handleAiChat("", base64Audio); 
         };
       };
       mediaRecorder.current.start();
