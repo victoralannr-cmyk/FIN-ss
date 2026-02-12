@@ -51,7 +51,7 @@ interface Goal {
   emoji?: string;
 }
 
-const NERO_AVATAR = "https://i.postimg.cc/mD8NnC67/nero-raven-majestic.png"; 
+const NERO_AVATAR = "https://i.postimg.cc/cJCRJfCZ/Chat-GPT-Image-12-de-fev-de-2026-16-02-46-removebg-preview.png"; 
 
 // Logo GESTORA DONTE usando a imagem do elefante
 const DonteLogo = ({ className = "w-12 h-12" }: { className?: string }) => (
@@ -673,7 +673,7 @@ export const App: React.FC = () => {
               <X size={20} />
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-6 lg:space-y-8 no-scrollbar" style={{ background: 'radial-gradient(circle at 50% 10%, #660000 0%, #000000 80%)' }}>
+          <div className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-6 lg:space-y-8 no-scrollbar" style={{ background: 'radial-gradient(circle at 50% 10%, #d4af37 0%, #000000 80%)', backgroundOpacity: '0.1' }}>
             {messages.length === 0 && (
               <div className="text-center py-20 lg:py-32 space-y-8 lg:space-y-10 animate-in fade-in duration-1000">
                 <div className="w-24 lg:w-32 h-24 lg:h-32 mx-auto rounded-full border-4 border-[#d4af37]/20 overflow-hidden bg-neutral-900 shadow-2xl">
