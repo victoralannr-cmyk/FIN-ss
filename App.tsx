@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Plus, 
@@ -54,25 +53,16 @@ interface Goal {
 
 const NERO_AVATAR = "https://i.postimg.cc/mD8NnC67/nero-raven-majestic.png"; 
 
-const VWalletLogo = ({ className = "w-12 h-12" }: { className?: string }) => (
+// Logo GESTORA DONTE usando a imagem enviada pelo usuário
+const DonteLogo = ({ className = "w-12 h-12" }: { className?: string }) => (
   <div className={`relative ${className} flex items-center justify-center`}>
-    <div className="relative transform hover:scale-105 transition-transform duration-700">
-      <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_15px_rgba(212,175,55,0.4)]">
-        <path d="M20,30 Q35,85 50,85 Q65,85 80,30" fill="none" stroke="url(#v-gradient)" strokeWidth="14" strokeLinecap="round" />
-        <circle cx="50" cy="35" r="22" fill="url(#coin-gradient)" />
-        <text x="50" y="44" textAnchor="middle" fill="#2a1a00" fontSize="24" fontWeight="700" style={{ fontFamily: 'var(--font-main)' }}>$</text>
-        <defs>
-          <linearGradient id="v-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#d4af37" />
-            <stop offset="100%" stopColor="#f4a261" />
-          </linearGradient>
-          <linearGradient id="coin-gradient" x1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#ffd700" />
-            <stop offset="100%" stopColor="#b8860b" />
-          </linearGradient>
-        </defs>
-      </svg>
-      <Sparkles className="absolute -top-3 -right-3 text-yellow-400 w-6 h-6 animate-pulse" />
+    <div className="relative transform hover:scale-105 transition-transform duration-700 w-full h-full flex items-center justify-center">
+      <img 
+        src="https://i.postimg.cc/cJCRJfCZ/Chat-GPT-Image-12-de-fev-de-2026-16-02-46-removebg-preview.png" 
+        alt="GESTORA DONTE Logo" 
+        className="w-full h-full object-contain drop-shadow-[0_0_12px_rgba(212,175,55,0.3)]"
+      />
+      <Sparkles className="absolute -top-1 -right-1 text-yellow-400 w-5 h-5 animate-pulse" />
     </div>
   </div>
 );
@@ -108,7 +98,6 @@ export const App: React.FC = () => {
   const [newTransType, setNewTransType] = useState<'REVENUE' | 'EXPENSE'>('EXPENSE');
   const [newTransCategory, setNewTransCategory] = useState('Outros');
 
-  // Estados para nova meta (substituindo prompt)
   const [isAddingGoal, setIsAddingGoal] = useState(false);
   const [newGoalTitle, setNewGoalTitle] = useState('');
   const [newGoalTarget, setNewGoalTarget] = useState('');
@@ -261,14 +250,14 @@ export const App: React.FC = () => {
 
   const handleCreateGoal = async () => {
     if (!newGoalTitle.trim() || !newGoalTarget) return;
-    const target = parseFloat(newGoalTarget.replace(/\D/g, "")) / 100;
-    if (isNaN(target)) return;
+    const targetValue = parseCurrencyToNumber(newGoalTarget);
+    if (isNaN(targetValue) || targetValue <= 0) return;
 
     const emoji = await suggestEmoji(newGoalTitle);
     const newGoal: Goal = {
       id: Date.now().toString(),
       title: newGoalTitle,
-      target: target,
+      target: targetValue,
       current: 0,
       unit: 'R$',
       completed: false,
@@ -348,8 +337,8 @@ export const App: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center p-6 bg-black text-white">
         <Card className="w-full max-w-md bg-neutral-900 border-neutral-800 p-8 sm:p-12 space-y-12 rounded-[2.5rem]">
           <div className="text-center space-y-6">
-            <VWalletLogo className="w-24 h-24 mx-auto mb-2" />
-            <h1 className="text-4xl text-chique font-bold">VWallet</h1>
+            <DonteLogo className="w-40 h-40 mx-auto mb-2" />
+            <h1 className="text-3xl text-chique font-black tracking-widest">GESTORA DONTE</h1>
           </div>
           <div className="space-y-4">
              <p className="text-[10px] text-neutral-500 uppercase tracking-widest text-center">Informe seu Saldo Inicial</p>
@@ -390,8 +379,8 @@ export const App: React.FC = () => {
     <div className="min-h-screen bg-black text-white flex flex-col lg:flex-row font-sans overflow-hidden">
       <aside className="hidden lg:flex flex-col w-72 border-r border-neutral-900 p-10 bg-black/80 backdrop-blur-2xl">
         <div className="flex flex-col items-center gap-6 mb-16">
-          <VWalletLogo className="w-16 h-16" />
-          <span className="text-xl text-chique font-bold">VWallet</span>
+          <DonteLogo className="w-24 h-24" />
+          <span className="text-lg text-chique font-black text-center mt-2">GESTORA DONTE</span>
         </div>
         <nav className="space-y-3 flex-1">
           {[
@@ -423,7 +412,7 @@ export const App: React.FC = () => {
             <header className="flex flex-col sm:flex-row justify-between items-start gap-6 sm:gap-8">
               <div className="space-y-2 lg:space-y-4">
                 <h2 className="text-3xl lg:text-6xl font-bold tracking-tight">Olá, <span className="text-[#d4af37] uppercase">{userName}</span></h2>
-                <p className="text-sm lg:text-base text-white uppercase tracking-[0.2em] font-black border-l-4 border-[#d4af37] pl-4">
+                <p className="text-sm lg:text-lg text-white uppercase tracking-[0.2em] font-black border-l-4 border-[#d4af37] pl-5 py-1">
                   {new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())}
                 </p>
               </div>
@@ -433,7 +422,7 @@ export const App: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-10">
               <Card className="relative overflow-hidden p-8 lg:p-12 bg-neutral-950 border-neutral-900 shadow-2xl group rounded-[2.5rem]">
                 <Wallet className="absolute -right-8 -top-8 text-neutral-800 opacity-20 rotate-12" size={120} />
-                <h4 className="text-sm lg:text-base text-[#d4af37] uppercase tracking-[0.25em] mb-4 lg:mb-6 font-black drop-shadow-sm">Balanço Patrimonial Total</h4>
+                <h4 className="text-base lg:text-lg text-[#d4af37] uppercase tracking-[0.25em] mb-4 lg:mb-6 font-black drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">Balanço Patrimonial Total</h4>
                 <div className="flex items-center gap-5">
                    {isEditingBalance ? (
                      <div className="flex items-center gap-2">
@@ -457,7 +446,7 @@ export const App: React.FC = () => {
               </Card>
 
               <Card className="p-8 lg:p-12 bg-neutral-950 border-neutral-900 shadow-2xl rounded-[2.5rem]">
-                <h4 className="text-sm lg:text-base text-[#d4af37] uppercase tracking-[0.25em] mb-4 lg:mb-6 font-black drop-shadow-sm">Performance Nero</h4>
+                <h4 className="text-base lg:text-lg text-[#d4af37] uppercase tracking-[0.25em] mb-4 lg:mb-6 font-black drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">Performance Nero</h4>
                 <div className="text-3xl lg:text-5xl font-bold text-white">{stats.xp} <span className="text-sm font-normal text-neutral-400">XP</span></div>
                 <div className="mt-6 lg:mt-8 h-2 bg-neutral-900 rounded-full overflow-hidden border border-neutral-800">
                   <div className="h-full bg-gradient-to-r from-[#b8860b] to-[#d4af37] transition-all duration-1000" style={{ width: `${(stats.xp % 2000) / 20}%` }} />
@@ -552,11 +541,11 @@ export const App: React.FC = () => {
 
         {activeTab === 'tasks' && (
           <div className="space-y-8 lg:space-y-12 pb-24">
-             <header><h2 className="text-3xl lg:text-4xl font-bold tracking-tight uppercase">Tarefas diárias</h2></header>
+             <header><h2 className="text-3xl lg:text-4xl font-bold tracking-tight uppercase text-[#d4af37]">Tarefas diárias</h2></header>
             <Card className="rounded-[2.5rem] lg:rounded-[3rem] p-8 lg:p-12 bg-neutral-950 border-neutral-900 shadow-2xl">
               <div className="flex flex-col sm:flex-row gap-4 lg:gap-6 mb-8 lg:mb-12">
-                <input type="text" placeholder="Defina sua nova Tarefa..." className="flex-1 bg-black/50 border-b-2 border-neutral-800 p-4 lg:p-6 text-lg lg:text-xl outline-none focus:border-[#d4af37]" value={newTaskTitle} onChange={e => setNewTaskTitle(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddTask()} />
-                <button onClick={handleAddTask} className="p-4 lg:p-6 bg-[#d4af37] text-black rounded-3xl self-end sm:self-auto"><Plus size={28} lg:size={32} strokeWidth={3} /></button>
+                <input type="text" placeholder="Defina sua nova Tarefa..." className="flex-1 bg-black/50 border-b-2 border-neutral-800 p-4 lg:p-6 text-lg lg:text-xl outline-none focus:border-[#d4af37] text-white" value={newTaskTitle} onChange={e => setNewTaskTitle(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddTask()} />
+                <button onClick={handleAddTask} className="p-4 lg:p-6 bg-[#d4af37] text-black rounded-3xl self-end sm:self-auto hover:scale-105 active:scale-95 transition-transform"><Plus size={32} strokeWidth={3} /></button>
               </div>
               <div className="space-y-4 lg:space-y-6">
                 {tasks.length === 0 ? (
@@ -565,7 +554,7 @@ export const App: React.FC = () => {
                   tasks.map(task => (
                     <div key={task.id} onClick={() => toggleTask(task.id)} className={`p-6 lg:p-8 border rounded-[2rem] flex items-center gap-6 lg:gap-8 cursor-pointer transition-all ${task.completed ? 'opacity-30' : 'border-neutral-900 hover:border-[#d4af37]/40 bg-neutral-950/50'}`}>
                       <div className={`w-6 h-6 lg:w-8 h-8 rounded-full border-4 flex items-center justify-center ${task.completed ? 'bg-[#d4af37] border-[#d4af37]' : 'border-neutral-800'}`}>{task.completed && <Check size={14} className="text-black" strokeWidth={3} />}</div>
-                      <span className={`text-lg lg:text-xl uppercase flex-1 ${task.completed ? 'line-through text-neutral-600' : ''}`}>{task.emoji && <span className="mr-3">{task.emoji}</span>}{task.title}</span>
+                      <span className={`text-lg lg:text-xl uppercase flex-1 ${task.completed ? 'line-through text-neutral-600' : 'text-white'}`}>{task.emoji && <span className="mr-3">{task.emoji}</span>}{task.title}</span>
                       <button onClick={(e) => { e.stopPropagation(); setTasks(prev => prev.filter(t => t.id !== task.id)); }} className="text-neutral-800 hover:text-rose-500 transition-all"><Trash2 size={18} /></button>
                     </div>
                   ))
@@ -577,13 +566,13 @@ export const App: React.FC = () => {
 
         {activeTab === 'goals' && (
            <div className="space-y-8 lg:space-y-12 pb-24">
-             <header><h2 className="text-3xl lg:text-4xl font-bold tracking-tight uppercase">Metas</h2></header>
+             <header><h2 className="text-3xl lg:text-4xl font-bold tracking-tight uppercase text-[#d4af37]">Metas</h2></header>
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
                 <div className="bg-neutral-950 border border-neutral-900 rounded-[2.5rem] lg:rounded-[3rem] p-8 lg:p-10 shadow-xl"><GoalProgressCard activeCount={activeGoalsCount} completedCount={completedGoalsCount} /></div>
                 
                 {goals.map(goal => (
                   <Card key={goal.id} className="relative p-8 lg:p-10 bg-neutral-950 border-neutral-900 rounded-[2.5rem] lg:rounded-[3rem] group shadow-xl">
-                    <h4 className="text-lg lg:text-xl font-black uppercase mb-2">{goal.emoji && <span className="mr-2">{goal.emoji}</span>}{goal.title}</h4>
+                    <h4 className="text-lg lg:text-xl font-black uppercase mb-2 text-white">{goal.emoji && <span className="mr-2">{goal.emoji}</span>}{goal.title}</h4>
                     <p className="text-[10px] text-neutral-400 font-black uppercase mb-6 lg:mb-8 tracking-widest">Meta: {goal.target.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                     <div className="h-3 bg-neutral-900 rounded-full overflow-hidden mb-6 lg:mb-8 border border-neutral-800">
                       <div className="h-full bg-gradient-to-r from-[#b8860b] to-[#d4af37] transition-all duration-700" style={{ width: `${Math.min(100, (goal.current / goal.target) * 100)}%` }} />
@@ -639,7 +628,6 @@ export const App: React.FC = () => {
         )}
       </main>
 
-      {/* CHAT NERO RESPONSIVO */}
       {isAiOpen && (
         <div className="fixed inset-0 lg:inset-auto lg:bottom-12 lg:right-12 lg:w-[480px] lg:h-[840px] bg-black border border-neutral-900 lg:rounded-[3.5rem] flex flex-col z-[500] shadow-[0_40px_100px_rgba(0,0,0,1)] overflow-hidden animate-in slide-in-from-bottom-12 duration-500">
           <div className="p-6 lg:p-10 border-b border-neutral-900 flex justify-between items-center bg-black/95 backdrop-blur-xl">
@@ -668,15 +656,14 @@ export const App: React.FC = () => {
           </div>
           <div className="p-6 lg:p-10 border-t border-neutral-900 space-y-6 lg:space-y-8 bg-neutral-950/95 pb-32 lg:pb-16 backdrop-blur-xl">
             <div className="flex gap-3 lg:gap-5 items-center">
-              <input type="text" placeholder="Comande o Nero..." value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAiChat(chatInput)} className="flex-1 bg-black border border-neutral-800 p-4 lg:p-6 rounded-[1.5rem] lg:rounded-3xl text-xs lg:text-sm outline-none focus:border-[#d4af37]" />
-              <button onMouseDown={startRecording} onMouseUp={stopRecording} className={`p-4 lg:p-6 rounded-[1.5rem] lg:rounded-3xl transition-all shadow-xl ${isRecording ? 'bg-rose-700 text-white animate-pulse' : 'bg-neutral-900 text-neutral-600'}`}><Mic size={24} lg:size={30} /></button>
-              <button onClick={() => handleAiChat(chatInput)} className="p-4 lg:p-6 bg-[#d4af37] text-black rounded-[1.5rem] lg:rounded-3xl shadow-xl active:scale-90"><Send size={24} lg:size={30} strokeWidth={3} /></button>
+              <input type="text" placeholder="Comande o Nero..." value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAiChat(chatInput)} className="flex-1 bg-black border border-neutral-800 p-4 lg:p-6 rounded-[1.5rem] lg:rounded-3xl text-xs lg:text-sm outline-none focus:border-[#d4af37] text-white" />
+              <button onMouseDown={startRecording} onMouseUp={stopRecording} className={`p-4 lg:p-6 rounded-[1.5rem] lg:rounded-3xl transition-all shadow-xl ${isRecording ? 'bg-rose-700 text-white animate-pulse' : 'bg-neutral-900 text-neutral-600'}`}><Mic size={24} /></button>
+              <button onClick={() => handleAiChat(chatInput)} className="p-4 lg:p-6 bg-[#d4af37] text-black rounded-[1.5rem] lg:rounded-3xl shadow-xl active:scale-90"><Send size={24} strokeWidth={3} /></button>
             </div>
           </div>
         </div>
       )}
 
-      {/* NAVBAR MOBILE */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-20 bg-black/95 backdrop-blur-3xl border-t border-neutral-900 flex items-center justify-around px-4 pb-4 z-[400] shadow-[0_-15px_40px_rgba(0,0,0,0.9)]">
         <button onClick={() => setActiveTab('dashboard')} className={`p-3 rounded-full transition-all ${activeTab === 'dashboard' ? 'bg-[#d4af37] text-black shadow-lg' : 'text-neutral-700'}`}><LayoutDashboard size={22} /></button>
         <button onClick={() => setActiveTab('finances')} className={`p-3 rounded-full transition-all ${activeTab === 'finances' ? 'bg-[#d4af37] text-black shadow-lg' : 'text-neutral-700'}`}><Wallet size={22} /></button>
