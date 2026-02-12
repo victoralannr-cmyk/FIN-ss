@@ -559,7 +559,7 @@ export const App: React.FC = () => {
               <div className="flex flex-col sm:flex-row gap-4 lg:gap-6 mb-8 lg:mb-12">
                 <input type="text" placeholder="Defina sua nova Tarefa..." className="flex-1 bg-black/50 border-b-2 border-neutral-800 p-4 lg:p-6 text-lg lg:text-xl outline-none focus:border-[#d4af37] text-white" value={newTaskTitle} onChange={e => setNewTaskTitle(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddTask()} />
                 <button onClick={handleAddTask} className="p-4 lg:p-6 bg-[#d4af37] text-black rounded-3xl self-end sm:self-auto hover:scale-105 active:scale-95 transition-transform">
-                  <Plus className="w-8 h-8" strokeWidth={3} />
+                  <Plus className="w-8 h-8" />
                 </button>
               </div>
               <div className="space-y-4 lg:space-y-6">
@@ -643,7 +643,7 @@ export const App: React.FC = () => {
                     className="border-2 border-dashed border-neutral-800 rounded-[2.5rem] lg:rounded-[3rem] p-8 lg:p-10 flex flex-col items-center justify-center gap-4 text-neutral-700 hover:text-[#d4af37] hover:border-[#d4af37]/60 transition-all min-h-[250px] bg-neutral-950/20 group"
                   >
                      <div className="p-4 rounded-full bg-neutral-900 group-hover:bg-[#d4af37]/10 transition-colors">
-                       <Plus className="w-9 h-9"/>
+                       <Plus className="w-9 h-9" />
                      </div>
                      <span className="text-xs font-black uppercase tracking-[0.2em]">Nova Meta Estratégica</span>
                   </button>
