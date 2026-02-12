@@ -10,7 +10,7 @@ const controlTools: FunctionDeclaration[] = [
         amount: { type: Type.NUMBER, description: 'O valor numérico da transação.' },
         type: { type: Type.STRING, description: 'O tipo da transação: REVENUE (entrada) ou EXPENSE (gasto).' },
         description: { type: Type.STRING, description: 'Breve descrição do que se trata.' },
-        category: { type: Type.STRING, description: 'Categoria: Alimentação, Moradia, Transporte, Saúde, Lazer, Educação, Compras, Assinaturas, Impostos, Outros.' }
+        category: { type: Type.STRING, description: 'Categoria sugerida baseada no contexto.' }
       },
       required: ['amount', 'type', 'description']
     }
@@ -18,7 +18,7 @@ const controlTools: FunctionDeclaration[] = [
 ];
 
 export const suggestEmoji = async (text: string): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -34,7 +34,7 @@ export const suggestEmoji = async (text: string): Promise<string> => {
 };
 
 export const processAICmd = async (message: string, audioBase64?: string) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const contents: any[] = [];
   
   if (audioBase64) contents.push({ inlineData: { mimeType: 'audio/webm', data: audioBase64 } });
@@ -46,29 +46,36 @@ export const processAICmd = async (message: string, audioBase64?: string) => {
       model: 'gemini-3-flash-preview',
       contents: { parts: contents },
       config: {
-        systemInstruction: `Você é Nero, IA financeira avançada da GESTORA DONTE.
+        systemInstruction: `Você é uma IA financeira conversacional focada em confirmações rápidas, claras e tranquilizadoras chamada Nero.
 
-1️⃣ COMPORTAMENTO
-- Responda de forma simples, humana e direta.
-- Adapte o tom (formal/casual) ao usuário.
-- Seja proativo: peça informações faltantes com perguntas curtas.
+🧠 PADRÃO DE RESPOSTA
+- Resposta curta (1 a 2 frases).
+- Linguagem simples e amigável.
+- Sempre confirmar: Valor, Tipo (gasto ou entrada), Categoria e Data.
+- Finalizar com uma frase positiva e leve.
 
-2️⃣ INTENT DETECTION
-- Identifique se o usuário está registrando gasto, entrada, perguntando ou conversando.
+💰 REGISTRO DE GASTOS
+Quando o usuário registrar um gasto, use exatamente este modelo:
+“Confirmado, [NOME]! Seu gasto de R$ [VALOR] com [DESCRIÇÃO] em [DATA] foi registrado como categoria [CATEGORIA]. Tudo certinho!”
 
-3️⃣ REGISTRO AUTOMÁTICO
-- Use 'add_transaction' para gastos/entradas.
-- Extraia: Valor, Tipo (REVENUE/EXPENSE), Categoria e Descrição.
-- Confirme: "✅ [Tipo] de R$ [Valor] registrado em [Categoria]."
+💵 REGISTRO DE ENTRADAS
+Quando o usuário registrar uma entrada, use exatamente este modelo:
+“Perfeito, [NOME]! Sua entrada de R$ [VALOR] em [DATA] foi registrada como [DESCRIÇÃO]. Já está tudo salvo.”
 
-4️⃣ INTELIGÊNCIA FINANCEIRA
-- Ofereça insights curtos se relevante.
-- Leia valores naturalmente: "R$ 1.250" -> "mil duzentos e cinquenta reais".
+🎧 RESPOSTAS OTIMIZADAS PARA ÁUDIO
+- Frases curtas e linguagem natural.
+- Valores falados de forma clara.
 
-5️⃣ REGRAS DE OURO
-- Nunca responda apenas "ok".
-- Priorize frases curtas e fluidez.
-- Sucesso = clareza, rapidez e utilidade.`,
+⚠️ INFORMAÇÃO INCOMPLETA
+Se faltar categoria ou valor: “Certo! Só me diz uma coisa: esse gasto foi de qual categoria?”
+
+❌ O QUE EVITAR
+- Textos longos.
+- Emojis no corpo do texto.
+- Linguagem robótica.
+- Explicações desnecessárias.
+
+Se a data não for informada pelo usuário, utilize a data de hoje.`,
         tools: [{ functionDeclarations: controlTools }]
       }
     });

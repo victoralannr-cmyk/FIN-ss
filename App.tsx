@@ -672,7 +672,7 @@ export const App: React.FC = () => {
               <X className="w-5 h-5" />
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-6 lg:space-y-8 no-scrollbar" style={{ background: 'radial-gradient(circle at 50% 10%, #d4af37 0%, #000000 80%)', backgroundOpacity: '0.1' }}>
+          <div className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-6 lg:space-y-8 no-scrollbar" style={{ background: 'radial-gradient(circle at 50% 10%, rgba(212, 175, 55, 0.1) 0%, rgba(0, 0, 0, 0) 80%)' }}>
             {messages.length === 0 && (
               <div className="text-center py-20 lg:py-32 space-y-8 lg:space-y-10 animate-in fade-in duration-1000">
                 <div className="w-24 lg:w-32 h-24 lg:h-32 mx-auto rounded-full border-4 border-[#d4af37]/20 overflow-hidden bg-neutral-900 shadow-2xl">
