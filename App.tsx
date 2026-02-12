@@ -498,11 +498,11 @@ export const App: React.FC = () => {
             <header className="flex flex-col items-center gap-6 lg:gap-10">
               <div className="flex items-center gap-6 lg:gap-10">
                 <button onClick={() => changeMonth(-1)} className="p-3 lg:p-4 bg-neutral-900/50 rounded-2xl border border-neutral-800">
-                  <ChevronLeft className="w-6 h-6" />
+                  <ChevronLeft className="w-6 h-6 lg:w-8 lg:h-8" />
                 </button>
                 <h2 className="text-2xl lg:text-3xl font-black uppercase tracking-widest">{currentMonthName}</h2>
                 <button onClick={() => changeMonth(1)} className="p-3 lg:p-4 bg-neutral-900/50 rounded-2xl border border-neutral-800">
-                  <ChevronRight className="w-6 h-6" />
+                  <ChevronRight className="w-6 h-6 lg:w-8 lg:h-8" />
                 </button>
               </div>
             </header>
@@ -535,7 +535,7 @@ export const App: React.FC = () => {
                        <div key={t.id} className="flex items-center justify-between p-4 lg:p-5 bg-black/40 border border-neutral-900 rounded-2xl group transition-all">
                          <div className="flex items-center gap-4">
                            <div className={`p-2 lg:p-3 rounded-xl ${t.type === 'REVENUE' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
-                             {t.type === 'REVENUE' ? <ArrowUpCircle className="w-5 h-5" /> : <ArrowDownCircle className="w-5 h-5" />}
+                             {t.type === 'REVENUE' ? <ArrowUpCircle className="w-5 h-5 lg:w-6 lg:h-6" /> : <ArrowDownCircle className="w-5 h-5 lg:w-6 lg:h-6" />}
                            </div>
                            <div>
                              <p className="text-xs lg:text-sm font-medium text-white uppercase">{t.description}</p>
@@ -559,7 +559,7 @@ export const App: React.FC = () => {
               <div className="flex flex-col sm:flex-row gap-4 lg:gap-6 mb-8 lg:mb-12">
                 <input type="text" placeholder="Defina sua nova Tarefa..." className="flex-1 bg-black/50 border-b-2 border-neutral-800 p-4 lg:p-6 text-lg lg:text-xl outline-none focus:border-[#d4af37] text-white" value={newTaskTitle} onChange={e => setNewTaskTitle(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddTask()} />
                 <button onClick={handleAddTask} className="p-4 lg:p-6 bg-[#d4af37] text-black rounded-3xl self-end sm:self-auto hover:scale-105 active:scale-95 transition-transform">
-                  <Plus className="w-8 h-8" />
+                  <Plus className="w-8 h-8 lg:w-10 lg:h-10" />
                 </button>
               </div>
               <div className="space-y-4 lg:space-y-6">
@@ -569,13 +569,13 @@ export const App: React.FC = () => {
                   tasks.map(task => (
                     <div key={task.id} onClick={() => toggleTask(task.id)} className={`p-6 lg:p-8 border rounded-[2rem] flex items-center gap-6 lg:gap-8 cursor-pointer transition-all ${task.completed ? 'opacity-30' : 'border-neutral-900 hover:border-[#d4af37]/40 bg-neutral-950/50'}`}>
                       <div className={`w-6 h-6 lg:w-8 h-8 rounded-full border-4 flex items-center justify-center ${task.completed ? 'bg-[#d4af37] border-[#d4af37]' : 'border-neutral-800'}`}>
-                        {task.completed && <Check className="w-4 h-4 text-black" strokeWidth={3} />}
+                        {task.completed && <Check className="w-4 h-4 lg:w-5 lg:h-5 text-black" strokeWidth={3} />}
                       </div>
                       <span className={`text-lg lg:text-xl uppercase flex-1 ${task.completed ? 'line-through text-neutral-600' : 'text-white'}`}>
                         {task.emoji && <span className="mr-3">{task.emoji}</span>}{task.title}
                       </span>
                       <button onClick={(e) => { e.stopPropagation(); setTasks(prev => prev.filter(t => t.id !== task.id)); }} className="text-neutral-800 hover:text-rose-500 transition-all">
-                        <Trash2 className="w-5 h-5" />
+                        <Trash2 className="w-5 h-5 lg:w-6 lg:h-6" />
                       </button>
                     </div>
                   ))
@@ -607,7 +607,7 @@ export const App: React.FC = () => {
                        }} className="flex-1 py-3 lg:py-4 bg-neutral-900 text-white rounded-2xl font-black uppercase text-[10px] border border-neutral-800 hover:bg-neutral-800 transition-colors">+ Adicionar</button>
                     </div>
                     <button onClick={() => setGoals(prev => prev.filter(g => g.id !== goal.id))} className="absolute top-6 right-6 p-2 text-neutral-800 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all">
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-4 h-4 lg:w-5 lg:h-5" />
                     </button>
                   </Card>
                 ))}
@@ -643,7 +643,7 @@ export const App: React.FC = () => {
                     className="border-2 border-dashed border-neutral-800 rounded-[2.5rem] lg:rounded-[3rem] p-8 lg:p-10 flex flex-col items-center justify-center gap-4 text-neutral-700 hover:text-[#d4af37] hover:border-[#d4af37]/60 transition-all min-h-[250px] bg-neutral-950/20 group"
                   >
                      <div className="p-4 rounded-full bg-neutral-900 group-hover:bg-[#d4af37]/10 transition-colors">
-                       <Plus className="w-9 h-9" />
+                       <Plus className="w-9 h-9 lg:w-11 lg:h-11" />
                      </div>
                      <span className="text-xs font-black uppercase tracking-[0.2em]">Nova Meta Estratégica</span>
                   </button>
@@ -669,7 +669,7 @@ export const App: React.FC = () => {
               </div>
             </div>
             <button onClick={() => setIsAiOpen(false)} className="text-neutral-600 hover:text-white transition-colors bg-neutral-900 p-2 lg:p-3 rounded-full">
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5 lg:w-6 lg:h-6" />
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-6 lg:space-y-8 no-scrollbar" style={{ background: 'radial-gradient(circle at 50% 10%, rgba(212, 175, 55, 0.1) 0%, rgba(0, 0, 0, 0) 80%)' }}>
@@ -688,16 +688,16 @@ export const App: React.FC = () => {
                 </div>
               </div>
             ))}
-            {isAiLoading && <div className="text-[#d4af37] animate-pulse text-[11px] uppercase font-medium px-4 lg:px-8 flex items-center gap-3"><Loader2 className="animate-spin w-4 h-4"/> Nero está processando...</div>}
+            {isAiLoading && <div className="text-[#d4af37] animate-pulse text-[11px] uppercase font-medium px-4 lg:px-8 flex items-center gap-3"><Loader2 className="animate-spin w-4 h-4 lg:w-5 lg:h-5"/> Nero está processando...</div>}
           </div>
           <div className="p-6 lg:p-10 border-t border-neutral-900 space-y-6 lg:space-y-8 bg-neutral-950/95 pb-32 lg:pb-16 backdrop-blur-xl">
             <div className="flex gap-3 lg:gap-5 items-center">
               <input type="text" placeholder="Comande o Nero..." value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAiChat(chatInput)} className="flex-1 bg-black border border-neutral-800 p-4 lg:p-6 rounded-[1.5rem] lg:rounded-3xl text-xs lg:text-sm outline-none focus:border-[#d4af37] text-white" />
               <button onMouseDown={startRecording} onMouseUp={stopRecording} className={`p-4 lg:p-6 rounded-[1.5rem] lg:rounded-3xl transition-all shadow-xl ${isRecording ? 'bg-rose-700 text-white animate-pulse' : 'bg-neutral-900 text-neutral-600'}`}>
-                <Mic className="w-6 h-6" />
+                <Mic className="w-6 h-6 lg:w-7 lg:h-7" />
               </button>
               <button onClick={() => handleAiChat(chatInput)} className="p-4 lg:p-6 bg-[#d4af37] text-black rounded-[1.5rem] lg:rounded-3xl shadow-xl active:scale-90">
-                <Send className="w-6 h-6" />
+                <Send className="w-6 h-6 lg:w-7 lg:h-7" />
               </button>
             </div>
           </div>
