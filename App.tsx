@@ -58,7 +58,7 @@ const DonteLogo = ({ className = "w-12 h-12" }: { className?: string }) => (
     <div className="relative transform hover:scale-105 transition-transform duration-700 w-full h-full flex items-center justify-center">
       <img 
         src="https://i.postimg.cc/cJCRJfCZ/Chat-GPT-Image-12-de-fev-de-2026-16-02-46-removebg-preview.png" 
-        alt="GESTORA DONTE Logo" 
+        alt="Fante IA Logo" 
         className="w-full h-full object-contain drop-shadow-[0_0_12px_rgba(212,175,55,0.3)]"
       />
       <Sparkles className="absolute -top-1 -right-1 text-yellow-400 w-5 h-5 animate-pulse" />
@@ -337,7 +337,7 @@ export const App: React.FC = () => {
         <Card className="w-full max-w-md bg-neutral-900 border-neutral-800 p-8 sm:p-12 space-y-12 rounded-[2.5rem]">
           <div className="text-center space-y-6">
             <DonteLogo className="w-40 h-40 mx-auto mb-2" />
-            <h1 className="text-3xl text-chique font-black tracking-widest">GESTORA DONTE</h1>
+            <h1 className="text-3xl text-chique font-black tracking-widest">FANTE IA</h1>
           </div>
           <div className="space-y-4">
              <p className="text-[10px] text-neutral-500 uppercase tracking-widest text-center">Informe seu Saldo Inicial</p>
@@ -379,7 +379,7 @@ export const App: React.FC = () => {
       <aside className="hidden lg:flex flex-col w-72 border-r border-neutral-900 p-10 bg-black/80 backdrop-blur-2xl">
         <div className="flex flex-col items-center gap-6 mb-16">
           <DonteLogo className="w-24 h-24" />
-          <span className="text-lg text-chique font-black text-center mt-2">GESTORA DONTE</span>
+          <span className="text-lg text-chique font-black text-center mt-2">FANTE IA</span>
         </div>
         <nav className="space-y-3 flex-1">
           {[
