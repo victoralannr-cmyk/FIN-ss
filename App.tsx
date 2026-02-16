@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Plus, 
@@ -18,7 +19,8 @@ import {
   Pencil,
   Save,
   Sparkles,
-  Send
+  Send,
+  History
 } from 'lucide-react';
 import { Card } from './components/ui/Card';
 import { AnimatedNumber } from './components/ui/AnimatedNumber';
@@ -420,6 +422,87 @@ export const App: React.FC = () => {
               </button>
             </header>
 
+            {/* SEÇÃO DE ENTRADAS E SAÍDAS - AGORA NO TOPO */}
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-10">
+              <Card className="xl:col-span-2 bg-neutral-950 border-neutral-900 rounded-[2.5rem] p-8 lg:p-10 shadow-2xl flex flex-col justify-center">
+                <div className="flex items-center gap-3 mb-6">
+                  <Plus className="w-5 h-5 text-[#d4af37]" />
+                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[#d4af37]">Lançamento Rápido</h3>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <input 
+                    type="text" 
+                    placeholder="Descrição" 
+                    value={newTransDesc} 
+                    onChange={e => setNewTransDesc(e.target.value)} 
+                    className="w-full bg-black border border-neutral-800 p-4 rounded-2xl outline-none focus:border-[#d4af37] text-sm" 
+                  />
+                  <input 
+                    type="text" 
+                    placeholder="R$ 0,00" 
+                    value={newTransAmount} 
+                    onChange={e => setNewTransAmount(formatAsCurrencyInput(e.target.value))} 
+                    className="w-full bg-black border border-neutral-800 p-4 rounded-2xl outline-none focus:border-[#d4af37] text-sm" 
+                  />
+                  <select 
+                    value={newTransCategory} 
+                    onChange={e => setNewTransCategory(e.target.value)} 
+                    className="w-full bg-black border border-neutral-800 p-4 rounded-2xl outline-none focus:border-[#d4af37] text-sm appearance-none"
+                  >
+                    {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                  </select>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => setNewTransType('REVENUE')} 
+                      className={`flex-1 p-3 rounded-2xl font-bold uppercase text-[9px] transition-all ${newTransType === 'REVENUE' ? 'bg-emerald-600 text-white' : 'bg-neutral-900 text-neutral-500'}`}
+                    >
+                      Entrada
+                    </button>
+                    <button 
+                      onClick={() => setNewTransType('EXPENSE')} 
+                      className={`flex-1 p-3 rounded-2xl font-bold uppercase text-[9px] transition-all ${newTransType === 'EXPENSE' ? 'bg-rose-600 text-white' : 'bg-neutral-900 text-neutral-500'}`}
+                    >
+                      Saída
+                    </button>
+                  </div>
+                </div>
+                <button 
+                  onClick={handleAddManualTransaction} 
+                  className="btn-modern mt-6 w-full py-4 bg-gradient-to-r from-[#b8860b] to-[#d4af37] text-black rounded-2xl font-black uppercase tracking-[0.3em] text-[10px]"
+                >
+                  Registrar Fluxo
+                </button>
+              </Card>
+
+              <Card className="bg-neutral-950 border-neutral-900 rounded-[2.5rem] p-8 lg:p-10 shadow-2xl flex flex-col max-h-[320px]">
+                <div className="flex items-center gap-3 mb-6">
+                  <History className="w-5 h-5 text-neutral-500" />
+                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white">Fluxo Recente</h3>
+                </div>
+                <div className="flex-1 overflow-y-auto space-y-4 no-scrollbar">
+                   {transactions.length === 0 ? (
+                     <p className="text-[10px] text-neutral-600 uppercase italic py-4">Nenhum registro ainda.</p>
+                   ) : (
+                     transactions.slice(0, 5).map(t => (
+                       <div key={t.id} className="flex items-center justify-between gap-4 p-3 bg-black/40 border border-neutral-900 rounded-2xl">
+                         <div className={`p-2 rounded-lg ${t.type === 'REVENUE' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                           {t.type === 'REVENUE' ? <ArrowUpCircle className="w-4 h-4" /> : <ArrowDownCircle className="w-4 h-4" />}
+                         </div>
+                         <div className="flex-1 min-w-0">
+                           <p className="text-[10px] font-bold text-white uppercase truncate">{t.description}</p>
+                           <p className="text-[8px] text-neutral-600 uppercase tracking-widest">{t.category}</p>
+                         </div>
+                         <p className={`text-[10px] font-black ${t.type === 'REVENUE' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                           {t.type === 'REVENUE' ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                         </p>
+                       </div>
+                     ))
+                   )}
+                </div>
+              </Card>
+            </div>
+
+            {/* STATUS CARDS - AGORA NA SEGUNDA SEÇÃO */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-10">
               <Card className="relative overflow-hidden p-8 lg:p-12 bg-neutral-950 border-neutral-900 shadow-2xl group rounded-[2.5rem]">
                 <Wallet className="absolute -right-8 -top-8 text-neutral-800 opacity-20 rotate-12 w-24 h-24 lg:w-32 lg:h-32" />
@@ -506,27 +589,13 @@ export const App: React.FC = () => {
                 </button>
               </div>
             </header>
-            <Card className="bg-neutral-950 border-neutral-900 rounded-[2.5rem] lg:rounded-[3rem] p-8 lg:p-12 shadow-2xl space-y-8">
-              <h3 className="text-sm font-black uppercase tracking-[0.2em] text-[#d4af37]">Gastos e Entradas</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-                <input type="text" placeholder="Descrição" value={newTransDesc} onChange={e => setNewTransDesc(e.target.value)} className="w-full bg-black border border-neutral-800 p-4 rounded-xl outline-none focus:border-[#d4af37]" />
-                <input type="text" placeholder="Valor R$ 0,00" value={newTransAmount} onChange={e => setNewTransAmount(formatAsCurrencyInput(e.target.value))} className="w-full bg-black border border-neutral-800 p-4 rounded-xl outline-none focus:border-[#d4af37]" />
-                <select value={newTransCategory} onChange={e => setNewTransCategory(e.target.value)} className="w-full bg-black border border-neutral-800 p-4 rounded-xl outline-none focus:border-[#d4af37]">
-                  {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                </select>
-                <div className="flex gap-2">
-                  <button onClick={() => setNewTransType('REVENUE')} className={`flex-1 p-4 rounded-xl font-bold uppercase text-[9px] ${newTransType === 'REVENUE' ? 'bg-emerald-600 text-white' : 'bg-neutral-900 text-neutral-500'}`}>Receita</button>
-                  <button onClick={() => setNewTransType('EXPENSE')} className={`flex-1 p-4 rounded-xl font-bold uppercase text-[9px] ${newTransType === 'EXPENSE' ? 'bg-rose-600 text-white' : 'bg-neutral-900 text-neutral-500'}`}>Despesa</button>
-                </div>
-              </div>
-              <button onClick={handleAddManualTransaction} className="btn-modern w-full py-6 bg-gradient-to-r from-[#b8860b] to-[#d4af37] text-black rounded-2xl font-black uppercase tracking-[0.4em] text-[11px]">Registrar Lançamento</button>
-            </Card>
+            
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10">
                <div className="bg-neutral-950 border border-neutral-900 rounded-[2.5rem] lg:rounded-[3rem] p-8 lg:p-12 shadow-3xl">
                  <CategoryExpensesChart transactions={currentMonthTransactions} />
                </div>
                <Card className="bg-neutral-950 border border-neutral-900 rounded-[2.5rem] lg:rounded-[3rem] p-8 lg:p-12 shadow-3xl h-[450px] lg:h-[500px] flex flex-col">
-                 <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-6 lg:mb-8 border-b border-neutral-900 pb-4">Histórico Recente</h3>
+                 <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white mb-6 lg:mb-8 border-b border-neutral-900 pb-4">Histórico Mensal</h3>
                  <div className="flex-1 overflow-y-auto space-y-4 no-scrollbar">
                    {currentMonthTransactions.length === 0 ? (
                      <p className="text-[10px] text-neutral-600 uppercase italic py-8">Sem lançamentos este mês.</p>
