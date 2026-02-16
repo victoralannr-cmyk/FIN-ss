@@ -22,12 +22,12 @@ export const CategoryExpensesChart: React.FC<CategoryExpensesChartProps> = ({ tr
   const total: number = data.reduce((acc: number, curr: { amount: number }) => acc + curr.amount, 0);
   
   const colors = [
-    '#D95C5C', // Main Red
-    '#C94A4A', // Dark Red
-    '#E57373', // Light Red
-    '#FF8A80', // Coral Red
-    '#EF5350', // Bright Red
-    '#B71C1C', // Deep Red
+    '#CC5A5A', // Main Red Soft
+    '#B84C4C', // Darker Red Soft
+    '#D97F7F', // Lighter Red Soft
+    '#E59A9A', // Pale Red
+    '#A63D3D', // Deep Red Soft
+    '#F2B6B6', // Very Light Red
   ];
 
   const size: number = 120;
@@ -39,7 +39,7 @@ export const CategoryExpensesChart: React.FC<CategoryExpensesChartProps> = ({ tr
 
   return (
     <div className="flex flex-col h-full w-full">
-      <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-[#D95C5C] mb-6 lg:mb-8">GASTOS POR CATEGORIA</h3>
+      <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-[#CC5A5A] mb-6 lg:mb-8">GASTOS POR CATEGORIA</h3>
       
       {total === 0 ? (
         <div className="flex-1 flex items-center justify-center border border-dashed border-[var(--border-color)] rounded-2xl py-8">
@@ -71,7 +71,6 @@ export const CategoryExpensesChart: React.FC<CategoryExpensesChartProps> = ({ tr
                   />
                 );
               })}
-              {/* Center hole needs to match bg-card precisely or be transparent if using clip-path */}
               <circle
                 cx={size / 2}
                 cy={size / 2}

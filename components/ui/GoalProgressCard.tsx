@@ -16,7 +16,7 @@ export const GoalProgressCard: React.FC<GoalProgressCardProps> = ({ activeCount,
 
   return (
     <div className="flex flex-col h-full w-full">
-      <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-[#D95C5C] mb-6 lg:mb-8 text-center sm:text-left">PROGRESSO DE METAS</h3>
+      <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-[#CC5A5A] mb-6 lg:mb-8 text-center sm:text-left">PROGRESSO DE METAS</h3>
       
       <div className="flex-1 flex flex-col justify-between items-center w-full">
         <div className="flex items-center justify-center relative py-4 w-full">
@@ -36,7 +36,7 @@ export const GoalProgressCard: React.FC<GoalProgressCardProps> = ({ activeCount,
                 cx="64"
                 cy="64"
                 r={radius}
-                stroke="#D95C5C"
+                stroke="#CC5A5A"
                 strokeWidth="8"
                 fill="transparent"
                 strokeDasharray={circumference}
@@ -53,7 +53,7 @@ export const GoalProgressCard: React.FC<GoalProgressCardProps> = ({ activeCount,
 
         <div className="flex justify-between items-end w-full mt-4 lg:mt-6 px-2">
           <div className="flex flex-col items-center">
-            <span className="text-xl font-black text-[#D95C5C] leading-none tabular-nums">{activeCount}</span>
+            <span className="text-xl font-black text-[#CC5A5A] leading-none tabular-nums">{activeCount}</span>
             <span className="text-[9px] font-black text-[var(--text-secondary)] uppercase tracking-widest mt-1">Ativas</span>
           </div>
           

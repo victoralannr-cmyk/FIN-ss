@@ -15,7 +15,7 @@ export const RadarScoreChart: React.FC<RadarScoreChartProps> = ({ data, size = 3
   const centerX = size / 2;
   const centerY = size / 2;
   const radius = (size / 2) * 0.65;
-  const themeColor = "#D95C5C";
+  const themeColor = "#CC5A5A";
 
   const averageScore = useMemo(() => {
     return Math.round(data.reduce((acc, curr) => acc + curr.value, 0) / data.length);
@@ -86,7 +86,7 @@ export const RadarScoreChart: React.FC<RadarScoreChartProps> = ({ data, size = 3
         {/* Data Polygon Fill */}
         <polygon
           points={dataPoints}
-          fill="rgba(217, 92, 92, 0.2)"
+          fill="rgba(204, 90, 90, 0.2)"
           stroke={themeColor}
           strokeWidth="3"
           className="transition-all duration-700 ease-out"
