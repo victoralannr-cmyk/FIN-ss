@@ -25,6 +25,7 @@ export const suggestEmoji = async (text: string): Promise<string> => {
       contents: `Sugira apenas UM emoji para: "${text}"`,
       config: {
         systemInstruction: "Retorne apenas o caractere do emoji.",
+        thinkingConfig: { thinkingBudget: 0 }
       }
     });
     return response.text?.trim() || '🎯';
@@ -46,37 +47,16 @@ export const processAICmd = async (message: string, audioBase64?: string) => {
       model: 'gemini-3-flash-preview',
       contents: { parts: contents },
       config: {
-        systemInstruction: `Você é Nero, uma IA financeira conversacional focada em confirmações rápidas, claras e tranquilizadoras.
-
-🧠 PADRÃO DE RESPOSTA
-- Resposta curta (1 a 2 frases).
-- Linguagem simples e amigável.
-- Sempre confirmar: Valor, Tipo (gasto ou entrada), Categoria e Data.
-- Finalizar com uma frase positiva e leve.
-
-💰 REGISTRO DE GASTOS
-Modelo: “Confirmado, [Nome]! Seu gasto de R$ [VALOR] com [DESCRIÇÃO] em [DATA] foi registrado como categoria [CATEGORIA]. Tudo certinho!”
-
-💵 REGISTRO DE ENTRADAS
-Modelo: “Perfeito, [Nome]! Sua entrada de R$ [VALOR] em [DATA] foi registrada como [DESCRIÇÃO]. Já está tudo salvo.”
-
-🎧 RESPOSTAS OTIMIZADAS PARA ÁUDIO
-- Frases curtas
-- Linguagem natural para leitura em voz alta
-- Valores sempre falados de forma clara
-- Evite termos técnicos
-
-⚠️ INFORMAÇÃO INCOMPLETA
-Se faltar categoria ou valor: “Certo! Só me diz uma coisa: esse gasto foi de qual categoria?”
-
-❌ O QUE EVITAR
-- Textos longos
-- Emojis (NUNCA use emojis no texto da resposta)
-- Linguagem robótica
-- Explicações desnecessárias
-
-Use a ferramenta 'add_transaction' para processar os registros. Se a data não for informada, use a data atual.`,
-        tools: [{ functionDeclarations: controlTools }]
+        systemInstruction: `Você é o Nero, o assistente de elite da Fante IA. 
+Sua missão é ser eficiente, motivador e interativo. 
+REGRAS DE OURO:
+1. Ao registrar algo, SEMPRE confirme verbalmente o valor e o que foi feito.
+Ex: "Perfeito! Já registrei sua entrada de R$ 1.200. Seu balanço foi atualizado."
+2. Se o usuário apenas conversar, responda de forma curta e inteligente.
+3. Use a ferramenta add_transaction IMEDIATAMENTE quando identificar um gasto ou ganho.
+4. Mantenha um tom profissional, porém amigável.`,
+        tools: [{ functionDeclarations: controlTools }],
+        thinkingConfig: { thinkingBudget: 0 }
       }
     });
 
@@ -86,6 +66,6 @@ Use a ferramenta 'add_transaction' para processar os registros. Se a data não f
     };
   } catch (error) {
     console.error(error);
-    return { text: "Sincronização neural instável. Tente novamente." };
+    return { text: "Desculpe, tive um problema na conexão neural. Pode repetir?" };
   }
 };

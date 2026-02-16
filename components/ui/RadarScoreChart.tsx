@@ -116,7 +116,7 @@ export const RadarScoreChart: React.FC<RadarScoreChartProps> = ({ data, size = 3
       {/* Central Score */}
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
         <span className="text-4xl font-black text-[var(--text-primary)] tracking-tighter leading-none tabular-nums">{averageScore}</span>
-        <span className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-[0.3em] mt-1">Status</span>
+        <span className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-[0.3em] mt-1">Nível</span>
       </div>
     </div>
   );

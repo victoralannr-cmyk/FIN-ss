@@ -19,22 +19,21 @@
         :root {
             --font-main: 'Inter', system-ui, -apple-system, sans-serif;
             
-            /* TEMA CLARO CONFORTÁVEL (Nova Paleta) */
-            --bg-main: #F6F7F9;
-            --bg-card: #FAFBFC;
-            --border-color: rgba(0, 0, 0, 0.05);
-            --text-primary: #1E1E1E;
-            --text-secondary: #6E6E6E;
-            --text-muted: #8A8F98;
-            --icon-inactive: #8A8F98;
+            /* TEMA CLARO AJUSTADO PARA ALTA VISIBILIDADE */
+            --bg-main: #EFF1F3; /* Escurecido levemente para dar contraste ao card */
+            --bg-card: #FFFFFF; /* Branco puro para máxima clareza */
+            --border-color: rgba(0, 0, 0, 0.1); /* Bordas mais visíveis */
+            --text-primary: #1A1A1A; /* Quase preto para nitidez */
+            --text-secondary: #4A4A4A; /* Cinza escuro legível */
+            --text-muted: #666666; /* Texto auxiliar com contraste adequado */
+            --icon-inactive: #757575;
             --primary-red: #CC5A5A;
             --primary-red-dark: #B84C4C;
             --success-green: #4A9F6E;
-            --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.06);
+            --shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.08); /* Sombra mais definida */
         }
 
         [data-theme="dark"] {
-            /* TEMA ESCURO (Mantido conforme diretriz anterior) */
             --bg-main: #121417;
             --bg-card: #1B1F2A;
             --border-color: #2A2F3A;
@@ -78,7 +77,6 @@
           text-transform: uppercase;
         }
 
-        /* ANIMAÇÕES GLOBAIS */
         @keyframes fadeInUp {
           from { opacity: 0; transform: translateY(15px); }
           to { opacity: 1; transform: translateY(0); }
@@ -128,7 +126,7 @@
         .card-hover:hover {
           transform: translateY(-4px);
           border-color: var(--primary-red);
-          box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+          box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
         }
     </style>
 <script type="importmap">
