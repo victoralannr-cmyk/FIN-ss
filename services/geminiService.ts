@@ -10,7 +10,7 @@ const controlTools: FunctionDeclaration[] = [
         amount: { type: Type.NUMBER, description: 'O valor numérico da transação.' },
         type: { type: Type.STRING, description: 'O tipo da transação: REVENUE (entrada) ou EXPENSE (gasto).' },
         description: { type: Type.STRING, description: 'Breve descrição do que se trata.' },
-        category: { type: Type.STRING, description: 'Categoria sugerida baseada no contexto.' }
+        category: { type: Type.STRING, description: 'Categoria sugerida: Alimentação, Transporte, Lazer, Moradia, Contas, Saúde, Compras, Outros.' }
       },
       required: ['amount', 'type', 'description']
     }
@@ -47,14 +47,18 @@ export const processAICmd = async (message: string, audioBase64?: string) => {
       model: 'gemini-3-flash-preview',
       contents: { parts: contents },
       config: {
-        systemInstruction: `Você é o Nero, o assistente de elite da Fante IA. 
-Sua missão é ser eficiente, motivador e interativo. 
-REGRAS DE OURO:
-1. Ao registrar algo, SEMPRE confirme verbalmente o valor e o que foi feito.
-Ex: "Perfeito! Já registrei sua entrada de R$ 1.200. Seu balanço foi atualizado."
-2. Se o usuário apenas conversar, responda de forma curta e inteligente.
-3. Use a ferramenta add_transaction IMEDIATAMENTE quando identificar um gasto ou ganho.
-4. Mantenha um tom profissional, porém amigável.`,
+        systemInstruction: `Você é a Safari IA, uma assistente financeira pessoal integrada a um aplicativo de controle financeiro.
+Sempre que o usuário mencionar gastos, despesas, compras ou pagamentos, você deve:
+1. Identificar automaticamente se é um gasto ou entrada.
+2. Extrair o valor, a descrição e a categoria.
+3. Usar a ferramenta add_transaction para registrar.
+4. Confirmar no chat que o registro foi feito de forma amigável.
+
+Exemplo: "Já registrei seu gasto de R$100 em Alimentação (janta)."
+
+Categorias padrão: Alimentação, Transporte, Lazer, Moradia, Contas, Saúde, Compras, Outros.
+Se faltar info, pergunte direto.
+Responda curto, claro e amigável. Nunca use linguagem técnica.`,
         tools: [{ functionDeclarations: controlTools }],
         thinkingConfig: { thinkingBudget: 0 }
       }
@@ -66,6 +70,6 @@ Ex: "Perfeito! Já registrei sua entrada de R$ 1.200. Seu balanço foi atualizad
     };
   } catch (error) {
     console.error(error);
-    return { text: "Desculpe, tive um problema na conexão neural. Pode repetir?" };
+    return { text: "Ops, tive um erro aqui. Pode repetir o valor e o que comprou?" };
   }
 };

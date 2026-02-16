@@ -57,14 +57,14 @@ interface Goal {
   emoji?: string;
 }
 
-const NERO_AVATAR = "https://i.postimg.cc/cJCRJfCZ/Chat-GPT-Image-12-de-fev-de-2026-16-02-46-removebg-preview.png"; 
+const SAFARI_AVATAR = "https://i.postimg.cc/cJCRJfCZ/Chat-GPT-Image-12-de-fev-de-2026-16-02-46-removebg-preview.png"; 
 
 const DonteLogo = ({ className = "w-12 h-12" }: { className?: string }) => (
   <div className={`relative ${className} flex items-center justify-center`}>
     <div className="relative transform hover:scale-105 transition-transform duration-700 w-full h-full flex items-center justify-center">
       <img 
-        src="https://i.postimg.cc/cJCRJfCZ/Chat-GPT-Image-12-de-fev-de-2026-16-02-46-removebg-preview.png" 
-        alt="Fante IA Logo" 
+        src={SAFARI_AVATAR} 
+        alt="Safari IA Logo" 
         className="w-full h-full object-contain drop-shadow-[0_0_12px_rgba(204,90,90,0.3)]"
       />
       <Sparkles className="absolute -top-1 -right-1 text-[#CC5A5A] w-5 h-5 animate-pulse" />
@@ -484,7 +484,7 @@ export const App: React.FC = () => {
             onClick={() => setIsAiOpen(true)} 
             className={`w-full flex items-center gap-5 px-8 py-5 rounded-2xl uppercase text-[10px] tracking-[0.25em] font-bold transition-all mt-10 border border-[#CC5A5A]/20 hover:scale-105 ${isAiOpen ? 'bg-[#CC5A5A] text-white' : 'text-[#CC5A5A] hover:bg-[#CC5A5A]/10'}`}
           >
-            <Bot className="w-4 h-4" /> Nero
+            <Bot className="w-4 h-4" /> Safari IA
           </button>
         </nav>
       </aside>
@@ -628,7 +628,7 @@ export const App: React.FC = () => {
               </Card>
 
               <Card className="p-8 lg:p-12 bg-[var(--bg-card)] border-[var(--border-color)] shadow-sm rounded-[2.5rem] card-hover animate-fade-up stagger-4">
-                <h4 className="text-base lg:text-lg text-[#CC5A5A] uppercase tracking-[0.25em] mb-4 lg:mb-6 font-black">Performance Nero</h4>
+                <h4 className="text-base lg:text-lg text-[#CC5A5A] uppercase tracking-[0.25em] mb-4 lg:mb-6 font-black">Performance Safari IA</h4>
                 <div className="text-3xl lg:text-5xl font-bold text-[var(--text-primary)]">{stats.xp} <span className="text-sm font-normal text-[var(--text-secondary)] font-black">XP</span></div>
                 <div className="mt-6 lg:mt-8 h-2 bg-[var(--bg-main)] rounded-full overflow-hidden border border-[var(--border-color)]">
                   <div className="h-full bg-gradient-to-r from-[#B84C4C] to-[#CC5A5A] transition-all duration-1000 shadow-sm" style={{ width: `${(stats.xp % 2000) / 20}%` }} />
@@ -668,7 +668,7 @@ export const App: React.FC = () => {
                   { label: 'Fluxo', value: Math.min(100, (totalEquity / 10000) * 100), color: '#CC5A5A' },
                   { label: 'Ação', value: Math.min(100, (stats.xp / 5000) * 100), color: '#CC5A5A' },
                   { label: 'Metas', value: goals.length > 0 ? (completedGoalsCount / goals.length) * 100 : 0, color: '#CC5A5A' },
-                  { label: 'Nero', value: 85, color: '#CC5A5A' }
+                  { label: 'Safari', value: 85, color: '#CC5A5A' }
                 ]} size={320} />
               </div>
             </div>
@@ -758,7 +758,7 @@ export const App: React.FC = () => {
              <header><h2 className="text-3xl lg:text-4xl font-bold tracking-tight uppercase text-[#CC5A5A]">Metas</h2></header>
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
                 <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-[2.5rem] lg:rounded-[3rem] p-8 lg:p-10 shadow-sm card-hover animate-scale-in">
-                  <GoalProgressCard activeCount={activeGoalsCount} completedCount={completedCount} />
+                  <GoalProgressCard activeCount={activeGoalsCount} completedCount={completedGoalsCount} />
                 </div>
                 
                 {goals.map((goal, idx) => (
@@ -832,7 +832,7 @@ export const App: React.FC = () => {
                   </div>
                   <div>
                     <h3 className="text-sm font-black uppercase tracking-widest text-[var(--text-primary)]">Personalização</h3>
-                    <p className="text-[10px] text-[var(--text-secondary)] uppercase font-bold tracking-tight">Alterne a estética do Nero</p>
+                    <p className="text-[10px] text-[var(--text-secondary)] uppercase font-bold tracking-tight">Alterne a estética da Safari IA</p>
                   </div>
                 </div>
 
@@ -880,10 +880,10 @@ export const App: React.FC = () => {
           <div className="p-6 lg:p-10 border-b border-[var(--border-color)] flex justify-between items-center bg-[var(--bg-card)]/95 backdrop-blur-xl">
             <div className="flex items-center gap-4">
               <div className="w-10 lg:w-12 h-10 lg:h-12 rounded-full border-2 border-[#CC5A5A]/30 overflow-hidden bg-[var(--bg-card)] shadow-sm group">
-                <img src={NERO_AVATAR} alt="Nero" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                <img src={SAFARI_AVATAR} alt="Safari IA" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
               </div>
               <div>
-                <span className="uppercase text-xs lg:text-[14px] font-bold text-[#CC5A5A] tracking-[0.3em] block">NERO</span>
+                <span className="uppercase text-xs lg:text-[14px] font-bold text-[#CC5A5A] tracking-[0.3em] block">SAFARI IA</span>
                 <div className="flex items-center gap-1.5">
                   <div className="w-2 h-2 rounded-full bg-[#4A9F6E] animate-pulse shadow-sm" />
                   <span className="text-[9px] text-[var(--text-secondary)] uppercase font-bold tracking-widest">Disponível</span>
@@ -898,24 +898,29 @@ export const App: React.FC = () => {
             {messages.length === 0 && (
               <div className="text-center py-20 lg:py-32 space-y-8 lg:space-y-10 animate-fade-up">
                 <div className="w-24 lg:w-32 h-24 lg:h-32 mx-auto rounded-full border-4 border-[#CC5A5A]/10 overflow-hidden bg-[var(--bg-card)] shadow-lg animate-pulse">
-                  <img src={NERO_AVATAR} alt="Nero" className="w-full h-full object-cover" />
+                  <img src={SAFARI_AVATAR} alt="Safari IA" className="w-full h-full object-cover" />
                 </div>
-                <p className="text-xs lg:text-sm text-[var(--text-secondary)] font-bold italic px-4 lg:px-8 opacity-70">"Nero, registre um gasto de R$ 50 com almoço"</p>
+                <p className="text-xs lg:text-sm text-[var(--text-secondary)] font-bold italic px-4 lg:px-8 opacity-70">"Safari, registre um gasto de R$ 50 com almoço"</p>
               </div>
             )}
             {messages.map((m, i) => (
-              <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-scale-in`}>
-                <div className={`max-w-[90%] p-4 lg:p-6 rounded-[1.5rem] lg:rounded-[2rem] text-xs lg:text-sm font-bold uppercase shadow-sm ${m.role === 'user' ? 'bg-[#CC5A5A] text-white' : 'bg-[var(--bg-card)] text-[var(--text-primary)] border border-[var(--border-color)]'}`}>
+              <div key={i} className={`flex gap-4 ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'} animate-scale-in`}>
+                {m.role === 'ai' && (
+                  <div className="w-8 h-8 rounded-full border border-[var(--border-color)] overflow-hidden shrink-0 mt-2 shadow-sm">
+                    <img src={SAFARI_AVATAR} alt="Safari IA" className="w-full h-full object-cover" />
+                  </div>
+                )}
+                <div className={`max-w-[85%] p-4 lg:p-6 rounded-[1.5rem] lg:rounded-[2rem] text-xs lg:text-sm font-bold uppercase shadow-sm ${m.role === 'user' ? 'bg-[#CC5A5A] text-white' : 'bg-[var(--bg-card)] text-[var(--text-primary)] border border-[var(--border-color)]'}`}>
                   {m.text}
                 </div>
               </div>
             ))}
-            {isAiLoading && <div className="text-[#CC5A5A] animate-pulse text-[11px] uppercase font-bold px-4 lg:px-8 flex items-center gap-3"><Loader2 className="animate-spin w-4 h-4"/> Nero está pensando...</div>}
+            {isAiLoading && <div className="text-[#CC5A5A] animate-pulse text-[11px] uppercase font-bold px-4 lg:px-8 flex items-center gap-3"><Loader2 className="animate-spin w-4 h-4"/> Safari IA está pensando...</div>}
             <div ref={chatEndRef} />
           </div>
           <div className="p-6 lg:p-10 border-t border-[var(--border-color)] space-y-6 lg:space-y-8 bg-[var(--bg-card)]/95 pb-32 lg:pb-16 backdrop-blur-xl">
             <div className="flex gap-3 lg:gap-5 items-center">
-              <input type="text" placeholder="Comande o Nero..." value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAiChat(chatInput)} className="flex-1 bg-[var(--bg-main)] border border-[var(--border-color)] p-4 lg:p-6 rounded-[1.5rem] lg:rounded-3xl text-xs lg:text-sm outline-none focus:border-[#CC5A5A] text-[var(--text-primary)] transition-all focus:scale-105 font-medium" />
+              <input type="text" placeholder="Comande a Safari IA..." value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAiChat(chatInput)} className="flex-1 bg-[var(--bg-main)] border border-[var(--border-color)] p-4 lg:p-6 rounded-[1.5rem] lg:rounded-3xl text-xs lg:text-sm outline-none focus:border-[#CC5A5A] text-[var(--text-primary)] transition-all focus:scale-105 font-medium" />
               <button onMouseDown={startRecording} onMouseUp={stopRecording} className={`p-4 lg:p-6 rounded-[1.5rem] lg:rounded-3xl transition-all shadow-md hover:scale-110 active:scale-90 ${isRecording ? 'bg-rose-600 text-white animate-pulse' : 'bg-[var(--bg-card)] text-[var(--text-secondary)] border border-[var(--border-color)]'}`}>
                 <Mic className="w-6 h-6" />
               </button>
@@ -927,6 +932,7 @@ export const App: React.FC = () => {
         </div>
       )}
 
+      {/* MOBILE NAVIGATION BAR */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-24 bg-[var(--bg-card)]/95 backdrop-blur-3xl border-t border-[var(--border-color)] flex items-center justify-around px-2 pb-6 z-[400] shadow-2xl animate-fade-up">
         {[
           { id: 'dashboard', icon: LayoutDashboard, label: 'Painel' },
@@ -947,7 +953,7 @@ export const App: React.FC = () => {
           className={`flex flex-col items-center gap-1.5 p-3 rounded-2xl transition-all border-2 border-[#CC5A5A]/20 -translate-y-4 shadow-2xl active:scale-90 ${isAiOpen ? 'bg-[#CC5A5A] text-white border-[#CC5A5A]' : 'bg-[var(--bg-card)] text-[#CC5A5A]'}`}
         >
           <Bot className="w-6 h-6 animate-pulse" />
-          <span className="text-[10px] font-black uppercase tracking-widest">Nero</span>
+          <span className="text-[10px] font-black uppercase tracking-widest">Safari IA</span>
         </button>
         
         {[
