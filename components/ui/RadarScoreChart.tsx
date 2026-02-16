@@ -15,7 +15,7 @@ export const RadarScoreChart: React.FC<RadarScoreChartProps> = ({ data, size = 3
   const centerX = size / 2;
   const centerY = size / 2;
   const radius = (size / 2) * 0.65;
-  const themeColor = "#d4af37";
+  const themeColor = "#D95C5C";
 
   const averageScore = useMemo(() => {
     return Math.round(data.reduce((acc, curr) => acc + curr.value, 0) / data.length);
@@ -53,15 +53,16 @@ export const RadarScoreChart: React.FC<RadarScoreChartProps> = ({ data, size = 3
 
   return (
     <div className="relative flex items-center justify-center select-none group animate-in fade-in zoom-in-95 duration-1000 w-full max-w-[320px] mx-auto">
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="overflow-visible drop-shadow-[0_0_30px_rgba(212,175,55,0.1)] w-full h-auto">
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="overflow-visible w-full h-auto drop-shadow-sm">
         {/* Background Grid */}
         {gridPaths.map((path, i) => (
           <polygon
             key={i}
             points={path}
             fill="none"
-            stroke="rgba(212, 175, 55, 0.1)"
+            stroke="var(--border-color)"
             strokeWidth="1"
+            opacity="0.5"
           />
         ))}
 
@@ -75,8 +76,9 @@ export const RadarScoreChart: React.FC<RadarScoreChartProps> = ({ data, size = 3
               y1={centerY}
               x2={x}
               y2={y}
-              stroke="rgba(212, 175, 55, 0.1)"
+              stroke="var(--border-color)"
               strokeWidth="1"
+              opacity="0.3"
             />
           );
         })}
@@ -84,9 +86,9 @@ export const RadarScoreChart: React.FC<RadarScoreChartProps> = ({ data, size = 3
         {/* Data Polygon Fill */}
         <polygon
           points={dataPoints}
-          fill="rgba(212, 175, 55, 0.2)"
+          fill="rgba(217, 92, 92, 0.2)"
           stroke={themeColor}
-          strokeWidth="2.5"
+          strokeWidth="3"
           className="transition-all duration-700 ease-out"
         />
 
@@ -98,11 +100,11 @@ export const RadarScoreChart: React.FC<RadarScoreChartProps> = ({ data, size = 3
               key={i}
               x={x}
               y={y}
-              fill={themeColor}
+              fill="var(--text-secondary)"
               fontSize={10} 
-              fontWeight="700"
+              fontWeight="900"
               textAnchor="middle"
-              className="uppercase tracking-[0.2em] opacity-80"
+              className="uppercase tracking-[0.2em]"
               style={{ fontFamily: 'var(--font-main)' }}
             >
               {d.label}
@@ -113,8 +115,8 @@ export const RadarScoreChart: React.FC<RadarScoreChartProps> = ({ data, size = 3
 
       {/* Central Score */}
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-        <span className="text-4xl font-bold text-white tracking-tighter leading-none">{averageScore}</span>
-        <span className="text-[10px] font-medium text-neutral-500 uppercase tracking-[0.3em] mt-1">Nível</span>
+        <span className="text-4xl font-black text-[var(--text-primary)] tracking-tighter leading-none tabular-nums">{averageScore}</span>
+        <span className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-[0.3em] mt-1">Status</span>
       </div>
     </div>
   );

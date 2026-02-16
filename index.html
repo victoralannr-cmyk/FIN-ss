@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,25 +18,52 @@
     <style>
         :root {
             --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+            
+            /* TEMA CLARO (Padrão) */
+            --bg-main: #FFFFFF;
+            --bg-card: #F4F5F7;
+            --border-color: #E9EBEF;
+            --text-primary: #1F1F1F;
+            --text-secondary: #6B6B6B;
+            --icon-inactive: #7A7F87;
+            --primary-red: #D95C5C;
+            --primary-red-dark: #C94A4A;
+            --success-green: #4CAF50;
         }
+
+        [data-theme="dark"] {
+            /* TEMA ESCURO */
+            --bg-main: #121417;
+            --bg-card: #1B1F2A;
+            --border-color: #2A2F3A;
+            --text-primary: #EDEDED;
+            --text-secondary: #9AA0A6;
+            --icon-inactive: #7A7F87;
+            --primary-red: #D95C5C;
+            --primary-red-dark: #C94A4A;
+            --success-green: #4CAF50;
+        }
+
         body {
             font-family: var(--font-main);
-            background-color: #000000;
-            color: #ffffff;
+            background-color: var(--bg-main);
+            color: var(--text-primary);
             margin: 0;
             padding: 0;
             overflow-x: hidden;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
             line-height: 1.5;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
+        
         #root {
             min-height: 100vh;
         }
+        
         ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: #000; }
-        ::-webkit-scrollbar-thumb { background: #222; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #333; }
+        ::-webkit-scrollbar-track { background: var(--bg-main); }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
         
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -47,16 +74,56 @@
           text-transform: uppercase;
         }
 
+        /* ANIMAÇÕES GLOBAIS */
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(15px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes scaleIn {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+        }
+
+        @keyframes slideInRight {
+          from { opacity: 0; transform: translateX(-20px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+
+        .animate-fade-up {
+          animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .animate-scale-in {
+          animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .animate-slide-right {
+          animation: slideInRight 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
         .btn-modern {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: linear-gradient(to right, var(--primary-red-dark), var(--primary-red));
+            color: white;
         }
         .btn-modern:hover {
             transform: translateY(-2px);
             filter: brightness(1.1);
+            box-shadow: 0 10px 20px -5px rgba(217, 92, 92, 0.4);
         }
         .btn-modern:active {
             transform: translateY(0);
-            scale: 0.98;
+            scale: 0.96;
+        }
+
+        .card-hover {
+          transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+        }
+        .card-hover:hover {
+          transform: translateY(-4px);
+          border-color: var(--primary-red);
+          box-shadow: 0 10px 30px -10px rgba(0,0,0,0.1);
         }
     </style>
 <script type="importmap">
@@ -74,7 +141,7 @@
 }
 </script>
 </head>
-<body class="bg-black text-white selection:bg-[#d4af37] selection:text-black">
+<body class="selection:bg-[#D95C5C] selection:text-white">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
 </body>

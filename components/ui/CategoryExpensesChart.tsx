@@ -22,12 +22,12 @@ export const CategoryExpensesChart: React.FC<CategoryExpensesChartProps> = ({ tr
   const total: number = data.reduce((acc: number, curr: { amount: number }) => acc + curr.amount, 0);
   
   const colors = [
-    '#d4af37', // Gold
-    '#b8860b', // Dark Gold
-    '#f4a261', // Sandy Gold
-    '#ffd700', // Bright Gold
-    '#daa520', // Goldenrod
-    '#8b4513', // Bronze/Saddle
+    '#D95C5C', // Main Red
+    '#C94A4A', // Dark Red
+    '#E57373', // Light Red
+    '#FF8A80', // Coral Red
+    '#EF5350', // Bright Red
+    '#B71C1C', // Deep Red
   ];
 
   const size: number = 120;
@@ -39,11 +39,11 @@ export const CategoryExpensesChart: React.FC<CategoryExpensesChartProps> = ({ tr
 
   return (
     <div className="flex flex-col h-full w-full">
-      <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-white mb-6 lg:mb-8">GASTOS POR CATEGORIA</h3>
+      <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-[#D95C5C] mb-6 lg:mb-8">GASTOS POR CATEGORIA</h3>
       
       {total === 0 ? (
-        <div className="flex-1 flex items-center justify-center border border-dashed border-neutral-800 rounded-2xl py-8">
-          <p className="text-[10px] text-neutral-600 uppercase font-black tracking-widest text-center">Sem dados de gastos</p>
+        <div className="flex-1 flex items-center justify-center border border-dashed border-[var(--border-color)] rounded-2xl py-8">
+          <p className="text-[10px] text-[var(--text-secondary)] uppercase font-black tracking-widest text-center">Sem dados de gastos</p>
         </div>
       ) : (
         <div className="flex flex-col sm:flex-row items-center gap-6 lg:gap-8">
@@ -71,11 +71,12 @@ export const CategoryExpensesChart: React.FC<CategoryExpensesChartProps> = ({ tr
                   />
                 );
               })}
+              {/* Center hole needs to match bg-card precisely or be transparent if using clip-path */}
               <circle
                 cx={size / 2}
                 cy={size / 2}
                 r={radius - strokeWidth / 2 - 2}
-                fill="#0a0a0a"
+                fill="var(--bg-card)"
               />
             </svg>
           </div>
@@ -89,17 +90,17 @@ export const CategoryExpensesChart: React.FC<CategoryExpensesChartProps> = ({ tr
                     className="w-2.5 h-2.5 rounded-full shrink-0" 
                     style={{ backgroundColor: colors[i % colors.length] }} 
                   />
-                  <span className="text-[10px] font-black text-neutral-400 uppercase tracking-tight group-hover:text-white transition-colors">
+                  <span className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-tight group-hover:text-[var(--text-primary)] transition-colors">
                     {item.name}
                   </span>
                 </div>
-                <span className="text-[10px] font-black text-white ml-4 tabular-nums">
+                <span className="text-[10px] font-black text-[var(--text-primary)] ml-4 tabular-nums">
                   R$ {item.amount.toLocaleString('pt-BR')}
                 </span>
               </div>
             ))}
             {data.length > 5 && (
-               <div className="text-[8px] text-neutral-600 uppercase font-black tracking-widest text-right mt-2">
+               <div className="text-[8px] text-[var(--text-secondary)] uppercase font-black tracking-widest text-right mt-2">
                  + {data.length - 5} Outras
                </div>
             )}
