@@ -560,17 +560,32 @@ export const App: React.FC = () => {
           <div key="tab-finances" className="space-y-8 animate-fade-up">
             <h2 className="text-3xl font-black uppercase text-[#fa7f72] tracking-tighter">Fluxo Financeiro</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="p-8 border-[#fa7f72]/20">
+              {/* Entradas do Mês - Verde Espelhado */}
+              <Card 
+                className="p-8 border-[#4ADE80]/30 backdrop-blur-md shadow-lg transition-transform hover:scale-105"
+                style={{ 
+                  background: 'linear-gradient(135deg, rgba(74, 222, 128, 0.15) 0%, rgba(74, 222, 128, 0.03) 100%)',
+                }}
+              >
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Entradas do Mês</p>
-                <p className="text-2xl font-black text-[#fa7f72]">R$ {monthlyStats.revenue.toLocaleString('pt-BR')}</p>
+                <p className="text-2xl font-black text-[#4ADE80]">R$ {monthlyStats.revenue.toLocaleString('pt-BR')}</p>
               </Card>
-              <Card className="p-8">
+
+              {/* Saídas do Mês - Vermelho Espelhado */}
+              <Card 
+                className="p-8 border-red-500/30 backdrop-blur-md shadow-lg transition-transform hover:scale-105"
+                style={{ 
+                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.03) 100%)',
+                }}
+              >
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Saídas do Mês</p>
-                <p className="text-2xl font-black text-white">R$ {monthlyStats.expenses.toLocaleString('pt-BR')}</p>
+                <p className="text-2xl font-black text-red-500">R$ {monthlyStats.expenses.toLocaleString('pt-BR')}</p>
               </Card>
-              <Card className="p-8">
+
+              {/* Saldo em Conta - Neutro/Themed */}
+              <Card className="p-8 border-[#fa7f72]/20 shadow-lg">
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Saldo em Conta</p>
-                <p className="text-2xl font-black text-[#fa7f72]">R$ {totalEquity.toLocaleString('pt-BR')}</p>
+                <p className="text-2xl font-black text-[var(--text-primary)]">R$ {totalEquity.toLocaleString('pt-BR')}</p>
               </Card>
             </div>
             
@@ -594,7 +609,7 @@ export const App: React.FC = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-6">
-                        <p className={`text-sm font-black ${t.type === 'REVENUE' ? 'text-[#fa7f72]' : 'text-white'}`}>
+                        <p className={`text-sm font-black ${t.type === 'REVENUE' ? 'text-[#fa7f72]' : 'text-[var(--text-primary)]'}`}>
                           {t.type === 'REVENUE' ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR')}
                         </p>
                         <button onClick={() => handleDeleteTransaction(t.id)} className="p-2 text-neutral-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
