@@ -72,6 +72,32 @@ interface ForecastResult {
 const SAFARI_AVATAR = "https://i.postimg.cc/j5q6V0PQ/Chat-GPT-Image-17-de-fev-de-2026-13-54-58-removebg-preview.png"; 
 const APP_LOGO = "https://i.postimg.cc/q768GvkD/Chat-GPT-Image-17-de-fev-de-2026-10-45-16-removebg-preview.png";
 
+const CATEGORY_EMOJIS: Record<string, string> = {
+  'Moradia': '🏠',
+  'Alimentação': '🍔',
+  'Transporte': '🚗',
+  'Saúde': '💊',
+  'Lazer': '🎮',
+  'Educação': '📚',
+  'Compras pessoais': '🛍️',
+  'Assinaturas e serviços': '📺',
+  'Impostos e taxas': '💸',
+  'Outros': '📦'
+};
+
+const DEFAULT_BUDGETS: Record<string, number> = {
+  'Moradia': 2500,
+  'Alimentação': 1500,
+  'Transporte': 250,
+  'Saúde': 200,
+  'Lazer': 450,
+  'Educação': 850,
+  'Compras pessoais': 500,
+  'Assinaturas e serviços': 125,
+  'Impostos e taxas': 1000,
+  'Outros': 300
+};
+
 // COMPONENTE DE LOGO DA MARCA (SIDEBAR / ONBOARDING)
 const DonteLogo = ({ className = "w-12 h-12", theme = "dark" }: { className?: string; theme?: 'light' | 'dark' }) => (
   <div className={`relative ${className} flex items-center justify-center`}>
@@ -97,6 +123,7 @@ export const App: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [categoryBudgets, setCategoryBudgets] = useState<Record<string, number>>(DEFAULT_BUDGETS);
   
   const [viewDate, setViewDate] = useState(new Date());
   const [initialReserve, setInitialReserve] = useState(0); 
@@ -170,6 +197,16 @@ export const App: React.FC = () => {
     return { revenue: revenueSum, expenses: expensesSum, balance: revenueSum - expensesSum };
   }, [currentMonthTransactions]);
 
+  const categorySpends = useMemo(() => {
+    const spends: Record<string, number> = {};
+    currentMonthTransactions.forEach(t => {
+      if (t.type === 'EXPENSE') {
+        spends[t.category] = (spends[t.category] || 0) + t.amount;
+      }
+    });
+    return spends;
+  }, [currentMonthTransactions]);
+
   const totalEquity = useMemo(() => initialReserve + monthlyStats.balance, [initialReserve, monthlyStats.balance]);
 
   useEffect(() => {
@@ -179,10 +216,12 @@ export const App: React.FC = () => {
     const savedTransactions = localStorage.getItem('nexus_user_transactions');
     const savedGoals = localStorage.getItem('nexus_user_goals');
     const savedReserve = localStorage.getItem('nexus_initial_reserve');
+    const savedBudgets = localStorage.getItem('nexus_category_budgets');
     const savedTheme = localStorage.getItem('nexus_user_theme') as 'light' | 'dark' | null;
 
     if (savedReserve) setInitialReserve(Number(savedReserve));
     if (savedTheme) setTheme(savedTheme);
+    if (savedBudgets) setCategoryBudgets(JSON.parse(savedBudgets));
     if (savedName) {
       setUserName(savedName);
       setIsOnboarding(false);
@@ -207,8 +246,9 @@ export const App: React.FC = () => {
       localStorage.setItem('nexus_user_transactions', JSON.stringify(transactions));
       localStorage.setItem('nexus_user_goals', JSON.stringify(goals));
       localStorage.setItem('nexus_initial_reserve', initialReserve.toString());
+      localStorage.setItem('nexus_category_budgets', JSON.stringify(categoryBudgets));
     }
-  }, [stats, tasks, transactions, goals, initialReserve, isOnboarding, isLoaded, userName]);
+  }, [stats, tasks, transactions, goals, initialReserve, categoryBudgets, isOnboarding, isLoaded, userName]);
 
   const triggerFireworks = (color = '#fa7f72') => {
     confetti({ particleCount: 40, spread: 70, origin: { y: 0.6 }, colors: [color] });
@@ -582,12 +622,49 @@ export const App: React.FC = () => {
                 <p className="text-2xl font-black text-red-500">R$ {monthlyStats.expenses.toLocaleString('pt-BR')}</p>
               </Card>
 
-              {/* Saldo em Conta - Neutro/Themed */}
-              <Card className="p-8 border-[#fa7f72]/20 shadow-lg">
+              {/* Saldo em Conta - Verde Espelhado conforme solicitado */}
+              <Card 
+                className="p-8 border-[#4ADE80]/30 backdrop-blur-md shadow-lg transition-transform hover:scale-105"
+                style={{ 
+                  background: 'linear-gradient(135deg, rgba(74, 222, 128, 0.15) 0%, rgba(74, 222, 128, 0.03) 100%)',
+                }}
+              >
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Saldo em Conta</p>
-                <p className="text-2xl font-black text-[var(--text-primary)]">R$ {totalEquity.toLocaleString('pt-BR')}</p>
+                <p className="text-2xl font-black text-[#4ADE80]">R$ {totalEquity.toLocaleString('pt-BR')}</p>
               </Card>
             </div>
+
+            {/* ORÇAMENTO POR CATEGORIA */}
+            <Card className="rounded-[2.5rem] bg-[var(--bg-card)] border-[var(--border-color)] overflow-hidden">
+              <h3 className="text-xs font-black uppercase tracking-[0.2em] mb-8 text-[var(--text-primary)]">ORÇAMENTO POR CATEGORIA</h3>
+              <div className="space-y-8">
+                {Object.entries(CATEGORY_EMOJIS).map(([category, emoji]) => {
+                  const spent = categorySpends[category] || 0;
+                  const target = categoryBudgets[category] || 100;
+                  const progress = Math.min((spent / target) * 100, 100);
+                  
+                  return (
+                    <div key={category} className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="text-lg">{emoji}</span>
+                          <span className="text-xs font-bold text-[var(--text-secondary)]">{category}</span>
+                        </div>
+                        <div className="text-xs font-black text-[var(--text-primary)] tabular-nums">
+                          R$ {spent.toLocaleString('pt-BR')} / {target.toLocaleString('pt-BR')}
+                        </div>
+                      </div>
+                      <div className="h-2.5 w-full bg-[var(--bg-main)] rounded-full overflow-hidden border border-[var(--border-color)]">
+                        <div 
+                          className="h-full bg-[#4ADE80] transition-all duration-1000 ease-out" 
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
             
             <Card className="rounded-[2.5rem]">
               <div className="flex justify-between items-center mb-6">
