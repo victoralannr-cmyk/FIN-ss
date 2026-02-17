@@ -72,12 +72,6 @@ interface HabitTracker {
   xpPerCheck: number;
 }
 
-interface ForecastResult {
-  projectedBalance: number;
-  insight: string;
-  trendPoints: number[];
-}
-
 const SAFARI_AVATAR = "https://i.postimg.cc/j5q6V0PQ/Chat-GPT-Image-17-de-fev-de-2026-13-54-58-removebg-preview.png"; 
 const APP_LOGO = "https://i.postimg.cc/q768GvkD/Chat-GPT-Image-17-de-fev-de-2026-10-45-16-removebg-preview.png";
 
@@ -327,7 +321,6 @@ export const App: React.FC = () => {
 
   const handleAddHabit = () => {
     if (!newHabitName.trim()) {
-      // Se estiver vazio, foca o input para o usuário digitar
       if (habitInputRef.current) {
         habitInputRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
         habitInputRef.current.focus();
@@ -437,16 +430,28 @@ export const App: React.FC = () => {
 
     try {
       const result = await processAICmd(input, audioBase64);
+      let finalAiResponse = result.text || "";
+
       if (result.functionCalls) {
         result.functionCalls.forEach((call: any) => {
           if (call.name === 'add_transaction') {
-            const val = call.args.type === 'REVENUE' ? Number(call.args.amount) : -Number(call.args.amount);
-            handleAdjustBalance(val, call.args.description, call.args.category || 'Outros');
+            const amount = Number(call.args.amount);
+            const val = call.args.type === 'REVENUE' ? amount : -amount;
+            const desc = call.args.description;
+            const cat = call.args.category || 'Outros';
+            
+            handleAdjustBalance(val, desc, cat);
             triggerFireworks('#fa7f72');
+
+            if (!finalAiResponse) {
+               const tipoStr = val > 0 ? 'entrada' : 'gasto';
+               finalAiResponse = `Entendido! Registrei seu ${tipoStr} de R$ ${Math.abs(val).toLocaleString('pt-BR')} com "${desc}" na categoria ${cat}.`;
+            }
           }
         });
       }
-      setMessages(prev => [...prev, { role: 'ai', text: result.text || "Operação concluída com sucesso." }]);
+
+      setMessages(prev => [...prev, { role: 'ai', text: finalAiResponse || "Tudo certo! Como posso te ajudar agora?" }]);
     } catch (err) {
       setMessages(prev => [...prev, { role: 'ai', text: "Desculpe, tive um erro na conexão neural." }]);
     } finally {
@@ -799,7 +804,7 @@ export const App: React.FC = () => {
           <div className="flex-1 overflow-y-auto p-6 space-y-6 no-scrollbar">
             {messages.map((m, i) => (
               <div key={i} className={`flex gap-3 ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                <div className={`max-w-[85%] p-4 rounded-2xl text-[11px] sm:text-xs font-bold uppercase shadow-sm ${m.role === 'user' ? 'bg-[#fa7f72] text-black' : 'bg-[var(--bg-card)] text-white border border-[var(--border-color)]'}`}>{m.text}</div>
+                <div className={`max-w-[85%] p-4 rounded-2xl text-[11px] sm:text-xs font-bold uppercase shadow-sm ${m.role === 'user' ? 'bg-[#fa7f72] text-black' : 'bg-[var(--bg-card)] text-[var(--text-primary)] border border-[var(--border-color)]'}`}>{m.text}</div>
               </div>
             ))}
             {isAiLoading && <div className="text-[#fa7f72] animate-pulse text-[9px] uppercase font-black tracking-widest px-4">Safari IA processando...</div>}
@@ -807,7 +812,7 @@ export const App: React.FC = () => {
           </div>
           <div className="p-6 bg-[var(--bg-card)]/90 backdrop-blur-xl pb-32 sm:pb-8">
             <div className="flex gap-2 items-center">
-              <input type="text" placeholder="COMANDO..." value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAiChat(chatInput)} className="flex-1 bg-[var(--bg-main)] border border-[var(--border-color)] p-4 rounded-2xl text-[11px] text-white outline-none focus:border-[#fa7f72]" />
+              <input type="text" placeholder="COMANDO..." value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAiChat(chatInput)} className="flex-1 bg-[var(--bg-main)] border border-[var(--border-color)] p-4 rounded-2xl text-[11px] text-[var(--text-primary)] outline-none focus:border-[#fa7f72]" />
               <button onMouseDown={startRecording} onMouseUp={stopRecording} className={`p-4 rounded-2xl ${isRecording ? 'bg-red-600 animate-pulse' : 'bg-neutral-800 text-[#fa7f72]'}`}><Mic className="w-5 h-5"/></button>
               <button onClick={() => handleAiChat(chatInput)} className="p-4 bg-[#fa7f72] text-black rounded-2xl shadow-lg"><Send className="w-5 h-5"/></button>
             </div>

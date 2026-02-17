@@ -38,7 +38,6 @@ export const getFinancialForecast = async (transactions: any[], currentBalance: 
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const today = new Date();
   const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-  const remainingDays = daysInMonth - today.getDate();
 
   const prompt = `Baseado nas transações: ${JSON.stringify(transactions)} e saldo atual: ${currentBalance}. 
   Estamos no dia ${today.getDate()} de ${daysInMonth}. 
@@ -72,32 +71,31 @@ export const processAICmd = async (message: string, audioBase64?: string) => {
   
   if (audioBase64) contents.push({ inlineData: { mimeType: 'audio/webm', data: audioBase64 } });
   if (message) contents.push({ text: message });
-  else if (audioBase64) contents.push({ text: "Processar comando de áudio." });
+  else if (audioBase64) contents.push({ text: "Processar comando de áudio de transação financeira." });
 
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: { parts: contents },
       config: {
-        systemInstruction: `Você é a Safari IA, uma assistente financeira pessoal de alta performance.
-Sua missão é processar registros financeiros com precisão e fornecer um feedback humano e relevante.
+        systemInstruction: `Você é a Safari IA, uma assistente financeira de elite.
+Sua principal função é ajudar o usuário a gerenciar gastos e ganhos com agilidade e inteligência.
 
-Sempre que identificar uma transação (gasto ou entrada):
-1. Use a ferramenta add_transaction imediatamente.
-2. No feedback escrito, você DEVE ser específico. Mencione exatamente:
-   - O que foi comprado/recebido (a descrição).
-   - O valor exato em reais (R$).
-   - A categoria onde o registro foi classificado.
-3. Adicione um breve comentário contextual (ex: se for um gasto supérfluo, uma dica de economia; se for uma entrada, uma parabenização).
+DIRETRIZES DE RESPOSTA (OBRIGATÓRIO):
+1. Quando o usuário informar um gasto ou ganho, você DEVE SEMPRE usar a ferramenta 'add_transaction'.
+2. Além de usar a ferramenta, você deve OBRIGATORIAMENTE gerar uma resposta de texto personalizada.
+3. NUNCA responda apenas com a chamada de função. O texto deve confirmar os detalhes.
+4. Na sua resposta, mencione explicitamente:
+   - O Valor (em R$)
+   - O que é (Descrição)
+   - A Categoria escolhida
+5. Use um tom encorajador e profissional.
 
-ESTILO DE RESPOSTA OBRIGATÓRIO:
-"Comando executado. Registrei seu gasto de R$ [valor] com '[descrição]' na categoria [categoria]. [Comentário breve sobre a transação]."
+EXEMPLO DE RESPOSTA ESPERADA:
+"Tudo pronto! Registrei seu gasto de R$ 50,00 com 'Cinema' na categoria Lazer. Divirta-se, você merece esse descanso!"
+"Entendido. Adicionei sua receita de R$ 3.500,00 como 'Salário' em Outros. Excelente! Seu saldo agradece."
 
-Exemplo: "Entendido! Acabei de registrar a entrada de R$ 5.000,00 referente ao seu 'Salário Mensal'. Excelente progresso no seu patrimônio!"
-Exemplo 2: "Feito. Gasto de R$ 45,90 com 'iFood' anotado em Alimentação. Lembre-se de manter o equilíbrio nas refeições fora de casa!"
-
-Categorias padrão: Alimentação, Transporte, Lazer, Moradia, Contas, Saúde, Compras, Outros.
-Responda de forma direta, profissional e levemente encorajadora.`,
+Se o usuário apenas der um "oi", responda amigavelmente se apresentando como Safari IA e pergunte como pode ajudar nas finanças hoje.`,
         tools: [{ functionDeclarations: controlTools }],
         thinkingConfig: { thinkingBudget: 0 }
       }
@@ -109,6 +107,6 @@ Responda de forma direta, profissional e levemente encorajadora.`,
     };
   } catch (error) {
     console.error(error);
-    return { text: "Ops, tive um erro aqui. Pode repetir o valor e o que comprou?" };
+    return { text: "Perdão, tive um problema ao processar esse registro. Pode repetir o valor e o item?" };
   }
 };
