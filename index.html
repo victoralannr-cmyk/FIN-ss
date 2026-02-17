@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-theme="light">
+<html lang="pt-BR" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -19,32 +19,29 @@
         :root {
             --font-main: 'Inter', system-ui, -apple-system, sans-serif;
             
-            /* TEMA CLARO AJUSTADO PARA ALTA VISIBILIDADE */
-            --bg-main: #EFF1F3; /* Escurecido levemente para dar contraste ao card */
-            --bg-card: #FFFFFF; /* Branco puro para máxima clareza */
-            --border-color: rgba(0, 0, 0, 0.1); /* Bordas mais visíveis */
-            --text-primary: #1A1A1A; /* Quase preto para nitidez */
-            --text-secondary: #4A4A4A; /* Cinza escuro legível */
-            --text-muted: #666666; /* Texto auxiliar com contraste adequado */
-            --icon-inactive: #757575;
-            --primary-red: #CC5A5A;
-            --primary-red-dark: #B84C4C;
-            --success-green: #4A9F6E;
-            --shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.08); /* Sombra mais definida */
+            /* TEMA DARK (ATLAS) COM ACENTO SALMÃO/BEGÊ */
+            --bg-main: #0A0A0B;
+            --bg-card: #121214;
+            --border-color: rgba(250, 127, 114, 0.1);
+            --text-primary: #FFFFFF;
+            --text-secondary: #A1A1AA;
+            --text-muted: #52525B;
+            --icon-inactive: #71717A;
+            --primary-beige: #fa7f72;
+            --primary-beige-glow: rgba(250, 127, 114, 0.4);
+            --success-green: #4ADE80;
+            --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.4);
         }
 
-        [data-theme="dark"] {
-            --bg-main: #121417;
-            --bg-card: #1B1F2A;
-            --border-color: #2A2F3A;
-            --text-primary: #EDEDED;
-            --text-secondary: #9AA0A6;
-            --text-muted: #7A7F87;
-            --icon-inactive: #7A7F87;
-            --primary-red: #D95C5C;
-            --primary-red-dark: #C94A4A;
-            --success-green: #4CAF50;
-            --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.2);
+        [data-theme="light"] {
+            --bg-main: #F4F4F5;
+            --bg-card: #FFFFFF;
+            --border-color: rgba(250, 127, 114, 0.2);
+            --text-primary: #18181B;
+            --text-secondary: #52525B;
+            --text-muted: #71717A;
+            --icon-inactive: #A1A1AA;
+            --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.05);
         }
 
         body {
@@ -66,7 +63,7 @@
         
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: var(--bg-main); }
-        ::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 10px; opacity: 0.3; }
+        ::-webkit-scrollbar-thumb { background: var(--primary-beige); border-radius: 10px; opacity: 0.3; }
         
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -104,29 +101,14 @@
           animation: slideInRight 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
-        .btn-modern {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            background: linear-gradient(to right, var(--primary-red-dark), var(--primary-red));
-            color: white;
-        }
-        .btn-modern:hover {
-            transform: translateY(-2px);
-            filter: brightness(1.1);
-            box-shadow: 0 10px 20px -5px rgba(204, 90, 90, 0.3);
-        }
-        .btn-modern:active {
-            transform: translateY(0);
-            scale: 0.96;
-        }
-
         .card-hover {
           transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
           box-shadow: var(--shadow-soft);
         }
         .card-hover:hover {
           transform: translateY(-4px);
-          border-color: var(--primary-red);
-          box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+          border-color: var(--primary-beige);
+          box-shadow: 0 12px 24px rgba(250, 127, 114, 0.1);
         }
     </style>
 <script type="importmap">
@@ -144,7 +126,7 @@
 }
 </script>
 </head>
-<body class="selection:bg-[#CC5A5A] selection:text-white">
+<body class="selection:bg-[#fa7f72] selection:text-black">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
 </body>

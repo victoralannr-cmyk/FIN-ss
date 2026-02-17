@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 interface WeeklyTaskChartProps {
@@ -18,10 +17,10 @@ export const WeeklyTaskChart: React.FC<WeeklyTaskChartProps> = ({ data }) => {
             <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
               <div className="relative w-full flex items-end justify-center h-full bg-neutral-900/50 rounded-xl overflow-hidden border border-neutral-800/30">
                 <div 
-                  className="w-full bg-[#ff0000] rounded-t-sm transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(255,0,0,0.3)] group-hover:bg-[#cc0000]"
+                  className="w-full bg-[#fa7f72] rounded-t-sm transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(250,127,114,0.3)] group-hover:bg-[#fb988f]"
                   style={{ height: `${heightPercent}%` }}
                 />
-                <span className="absolute -top-7 left-1/2 -translate-x-1/2 text-[10px] font-black text-[#ff0000] opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="absolute -top-7 left-1/2 -translate-x-1/2 text-[10px] font-black text-[#fa7f72] opacity-0 group-hover:opacity-100 transition-opacity">
                   {val}
                 </span>
               </div>

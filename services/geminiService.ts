@@ -34,6 +34,38 @@ export const suggestEmoji = async (text: string): Promise<string> => {
   }
 };
 
+export const getFinancialForecast = async (transactions: any[], currentBalance: number) => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const today = new Date();
+  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+  const remainingDays = daysInMonth - today.getDate();
+
+  const prompt = `Baseado nas transações: ${JSON.stringify(transactions)} e saldo atual: ${currentBalance}. 
+  Estamos no dia ${today.getDate()} de ${daysInMonth}. 
+  Preveja o saldo para o final do mês. 
+  Retorne EXCLUSIVAMENTE um JSON com: 
+  {
+    "projectedBalance": number,
+    "insight": "string curta de conselho",
+    "trendPoints": number[] (exatamente 10 números representando a tendência do saldo)
+  }`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        thinkingConfig: { thinkingBudget: 0 }
+      }
+    });
+    return JSON.parse(response.text || "{}");
+  } catch (error) {
+    console.error("Erro na projeção:", error);
+    return null;
+  }
+};
+
 export const processAICmd = async (message: string, audioBase64?: string) => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const contents: any[] = [];

@@ -22,12 +22,12 @@ export const CategoryExpensesChart: React.FC<CategoryExpensesChartProps> = ({ tr
   const total: number = data.reduce((acc: number, curr: { amount: number }) => acc + curr.amount, 0);
   
   const colors = [
-    '#CC5A5A', // Main Red Soft
-    '#B84C4C', // Darker Red Soft
-    '#D97F7F', // Lighter Red Soft
-    '#E59A9A', // Pale Red
-    '#A63D3D', // Deep Red Soft
-    '#F2B6B6', // Very Light Red
+    '#fa7f72', // Begê Salmão Principal
+    '#fb988f', // Salmão Claro
+    '#e06356', // Salmão Escuro
+    '#fbaea6', // Salmão Pastel
+    '#c45b4f', // Terracota
+    '#ffd0cc', // Blush
   ];
 
   const size: number = 120;
@@ -39,7 +39,7 @@ export const CategoryExpensesChart: React.FC<CategoryExpensesChartProps> = ({ tr
 
   return (
     <div className="flex flex-col h-full w-full">
-      <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-[#CC5A5A] mb-6 lg:mb-8">GASTOS POR CATEGORIA</h3>
+      <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-[#fa7f72] mb-6 lg:mb-8">GASTOS POR CATEGORIA</h3>
       
       {total === 0 ? (
         <div className="flex-1 flex items-center justify-center border border-dashed border-[var(--border-color)] rounded-2xl py-8">
