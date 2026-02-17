@@ -27,7 +27,9 @@ import {
   BrainCircuit,
   MessageSquare,
   User,
-  Palette
+  Palette,
+  Target,
+  Trophy
 } from 'lucide-react';
 import { Card } from './components/ui/Card';
 import { AnimatedNumber } from './components/ui/AnimatedNumber';
@@ -42,7 +44,7 @@ import {
   Task, 
   UserStats 
 } from './types';
-import { CATEGORIES } from './constants';
+import { CATEGORIES, XP_REQUIREMENTS, RANK_COLORS } from './constants';
 import { processAICmd, suggestEmoji, getFinancialForecast } from './services/geminiService';
 import confetti from 'canvas-confetti';
 
@@ -120,6 +122,14 @@ export const App: React.FC = () => {
   const [newTransType, setNewTransType] = useState<'REVENUE' | 'EXPENSE'>('EXPENSE');
   const [newTransCategory, setNewTransCategory] = useState('Outros');
 
+  // New Task States
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskPriority, setNewTaskPriority] = useState<Priority>(Priority.MEDIUM);
+
+  // New Goal States
+  const [newGoalTitle, setNewGoalTitle] = useState('');
+  const [newGoalTarget, setNewGoalTarget] = useState('');
+
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -162,19 +172,6 @@ export const App: React.FC = () => {
 
   const totalEquity = useMemo(() => initialReserve + monthlyStats.balance, [initialReserve, monthlyStats.balance]);
 
-  const equityHistoryPoints = useMemo(() => {
-    if (transactions.length === 0) return [initialReserve, initialReserve];
-    const sorted = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    let currentVal = initialReserve;
-    const points = [initialReserve];
-    sorted.forEach(t => {
-      const val = t.type === 'REVENUE' ? t.amount : -t.amount;
-      currentVal += val;
-      points.push(currentVal);
-    });
-    return points.slice(-12);
-  }, [transactions, initialReserve]);
-
   useEffect(() => {
     const savedName = localStorage.getItem('nexus_user_name');
     const savedStats = localStorage.getItem('nexus_user_stats');
@@ -213,18 +210,6 @@ export const App: React.FC = () => {
     }
   }, [stats, tasks, transactions, goals, initialReserve, isOnboarding, isLoaded, userName]);
 
-  const handleFetchForecast = async () => {
-    setIsForecasting(true);
-    try {
-      const res = await getFinancialForecast(currentMonthTransactions, totalEquity);
-      if (res) setForecast(res);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsForecasting(false);
-    }
-  };
-
   const triggerFireworks = (color = '#fa7f72') => {
     confetti({ particleCount: 40, spread: 70, origin: { y: 0.6 }, colors: [color] });
   };
@@ -242,7 +227,6 @@ export const App: React.FC = () => {
     };
     setTransactions(prev => [newTransaction, ...prev]);
     setStats(prev => ({ ...prev, balance: prev.balance + amount }));
-    setForecast(null);
   };
 
   const handleAddManualTransaction = () => {
@@ -253,6 +237,91 @@ export const App: React.FC = () => {
     setNewTransDesc('');
     setNewTransAmount('');
     triggerFireworks(newTransType === 'REVENUE' ? '#FFFFFF' : '#fa7f72');
+  };
+
+  const handleDeleteTransaction = (id: string) => {
+    const trans = transactions.find(t => t.id === id);
+    if (!trans) return;
+    const adjustment = trans.type === 'REVENUE' ? -trans.amount : trans.amount;
+    setTransactions(prev => prev.filter(t => t.id !== id));
+    setStats(prev => ({ ...prev, balance: prev.balance + adjustment }));
+  };
+
+  // Task Handlers
+  const handleAddTask = async () => {
+    if (!newTaskTitle.trim()) return;
+    const emoji = await suggestEmoji(newTaskTitle);
+    const newTask: Task = {
+      id: Math.random().toString(36).substr(2, 9),
+      title: newTaskTitle,
+      priority: newTaskPriority,
+      completed: false,
+      xpValue: newTaskPriority === Priority.HIGH ? 100 : newTaskPriority === Priority.MEDIUM ? 50 : 25,
+      emoji
+    };
+    setTasks(prev => [newTask, ...prev]);
+    setNewTaskTitle('');
+  };
+
+  const toggleTask = (id: string) => {
+    setTasks(prev => prev.map(t => {
+      if (t.id === id) {
+        const isNowCompleted = !t.completed;
+        if (isNowCompleted) {
+          addXP(t.xpValue);
+          triggerFireworks('#4ADE80');
+        } else {
+          addXP(-t.xpValue);
+        }
+        return { ...t, completed: isNowCompleted };
+      }
+      return t;
+    }));
+  };
+
+  const deleteTask = (id: string) => {
+    setTasks(prev => prev.filter(t => t.id !== id));
+  };
+
+  const addXP = (amount: number) => {
+    setStats(prev => {
+      let newXp = prev.xp + amount;
+      let newLevel = prev.level;
+      let newRank = prev.rank;
+
+      // Simple leveling: 1000 XP per level
+      newLevel = Math.floor(newXp / 1000) + 1;
+      
+      // Update Rank based on level/xp
+      if (newXp >= XP_REQUIREMENTS[Rank.ELITE]) newRank = Rank.ELITE;
+      else if (newXp >= XP_REQUIREMENTS[Rank.AVANCADO]) newRank = Rank.AVANCADO;
+      else if (newXp >= XP_REQUIREMENTS[Rank.INTERMEDIARIO]) newRank = Rank.INTERMEDIARIO;
+      else newRank = Rank.INICIANTE;
+
+      return { ...prev, xp: newXp, level: newLevel, rank: newRank };
+    });
+  };
+
+  // Goal Handlers
+  const handleAddGoal = () => {
+    if (!newGoalTitle.trim() || !newGoalTarget) return;
+    const targetVal = parseCurrencyToNumber(newGoalTarget);
+    const newGoal: Goal = {
+      id: Math.random().toString(36).substr(2, 9),
+      title: newGoalTitle,
+      target: targetVal,
+      current: 0,
+      unit: 'R$',
+      completed: false,
+      emoji: '🏁'
+    };
+    setGoals(prev => [newGoal, ...prev]);
+    setNewGoalTitle('');
+    setNewGoalTarget('');
+  };
+
+  const deleteGoal = (id: string) => {
+    setGoals(prev => prev.filter(g => g.id !== id));
   };
 
   const handleAiChat = async (text: string, audioBase64?: string) => {
@@ -322,7 +391,6 @@ export const App: React.FC = () => {
           </div>
 
           <div className="space-y-6">
-            {/* Seletor de Tema no Onboarding */}
             <div className="space-y-4">
               <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest text-center font-black">Escolha seu estilo visual</p>
               <div className="grid grid-cols-2 gap-4">
@@ -391,7 +459,7 @@ export const App: React.FC = () => {
         <nav className="space-y-3 flex-1">
           {[
             { id: 'dashboard', icon: LayoutDashboard, label: 'Painel' },
-            { id: 'finances', icon: Wallet, label: 'Finanças' },
+            { id: 'finances', icon: Wallet, label: 'Financeiro' },
             { id: 'tasks', icon: CheckSquare, label: 'Tarefas' },
             { id: 'goals', icon: Flag, label: 'Metas' },
             { id: 'settings', icon: Settings, label: 'Ajustes' }
@@ -421,11 +489,9 @@ export const App: React.FC = () => {
         {activeTab === 'dashboard' && (
           <div key="tab-dashboard" className="space-y-8 lg:space-y-12 animate-fade-up">
             <header className="flex flex-col items-center text-center space-y-10 mb-12 py-14 bg-[var(--bg-card)] rounded-[3rem] border border-[#fa7f72]/10 shadow-[0_0_60px_rgba(250,127,114,0.08)] animate-fade-up">
-              
               <div className="relative w-36 h-36 lg:w-48 lg:h-48 group">
                 <div className="absolute inset-0 rounded-[2.5rem] border-2 border-[#fa7f72] animate-pulse shadow-[0_0_25px_#fa7f72] opacity-80" />
                 <div className="absolute inset-0 rounded-[2.5rem] border border-[#fa7f72]/40 scale-110 opacity-20 group-hover:scale-125 transition-transform duration-1000" />
-                
                 <div className="w-full h-full rounded-[2.5rem] overflow-hidden p-1 lg:p-2 bg-[var(--bg-main)] backdrop-blur-sm z-10 relative">
                   <img 
                     src={SAFARI_AVATAR} 
@@ -435,32 +501,15 @@ export const App: React.FC = () => {
                   />
                 </div>
               </div>
-              
               <div className="space-y-6 flex flex-col items-center">
-                <img 
-                  src={APP_LOGO} 
-                  alt="Fante IA" 
-                  className="h-10 lg:h-14 object-contain opacity-90 transition-opacity hover:opacity-100" 
-                  style={{ filter: theme === 'light' ? 'brightness(0)' : 'brightness(0) invert(1)' }}
-                />
-
+                <img src={APP_LOGO} alt="Fante IA" className="h-10 lg:h-14 object-contain opacity-90 transition-opacity hover:opacity-100" style={{ filter: theme === 'light' ? 'brightness(0)' : 'brightness(0) invert(1)' }} />
                 <div className="space-y-2">
-                  <h2 className="text-3xl lg:text-6xl font-black tracking-tighter text-[var(--text-primary)] uppercase tabular-nums">
-                    BEM-VINDO, {userName}_
-                  </h2>
-                  <p className="text-[10px] lg:text-[13px] text-[var(--text-muted)] font-bold lowercase tracking-[0.2em] opacity-80">
-                    {new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date())}
-                  </p>
+                  <h2 className="text-3xl lg:text-6xl font-black tracking-tighter text-[var(--text-primary)] uppercase tabular-nums">BEM-VINDO, {userName}_</h2>
+                  <p className="text-[10px] lg:text-[13px] text-[var(--text-muted)] font-bold lowercase tracking-[0.2em] opacity-80">{new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date())}</p>
                 </div>
               </div>
-
-              <button 
-                onClick={() => setIsAiOpen(true)} 
-                className="flex items-center gap-4 px-12 py-6 bg-[#fa7f72] hover:bg-[#fb988f] text-black font-black uppercase tracking-[0.25em] text-[11px] lg:text-[14px] rounded-full transition-all hover:scale-105 active:scale-95 shadow-[0_20px_40px_rgba(250,127,114,0.35)] group"
-              >
-                <div className="bg-black/10 p-2 rounded-full group-hover:rotate-12 transition-transform">
-                  <MessageSquare className="w-5 h-5" />
-                </div>
+              <button onClick={() => setIsAiOpen(true)} className="flex items-center gap-4 px-12 py-6 bg-[#fa7f72] hover:bg-[#fb988f] text-black font-black uppercase tracking-[0.25em] text-[11px] lg:text-[14px] rounded-full transition-all hover:scale-105 active:scale-95 shadow-[0_20px_40px_rgba(250,127,114,0.35)] group">
+                <div className="bg-black/10 p-2 rounded-full group-hover:rotate-12 transition-transform"><MessageSquare className="w-5 h-5" /></div>
                 FALAR COM SAFARI
               </button>
             </header>
@@ -469,41 +518,18 @@ export const App: React.FC = () => {
               <Card className="xl:col-span-2 bg-[var(--bg-card)] border-[var(--border-color)] rounded-[2.5rem] p-8 lg:p-10 shadow-sm flex flex-col justify-center card-hover animate-fade-up stagger-1">
                 <div className="flex items-center gap-3 mb-6">
                   <Plus className="w-5 h-5 text-[#fa7f72] animate-bounce" />
-                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[#fa7f72]">REGISTRO DE ENTRADAS E SAÍDAS</h3>
+                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[#fa7f72]">REGISTRO RÁPIDO</h3>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <input 
-                    type="text" 
-                    placeholder="O que você gastou?" 
-                    value={newTransDesc} 
-                    onChange={e => setNewTransDesc(e.target.value)} 
-                    className="w-full bg-[var(--bg-main)] border border-[var(--border-color)] p-4 rounded-2xl outline-none focus:border-[#fa7f72] text-sm transition-all focus:scale-105 text-[var(--text-primary)]" 
-                  />
-                  <input 
-                    type="text" 
-                    placeholder="R$ 0,00" 
-                    value={newTransAmount} 
-                    onChange={e => setNewTransAmount(formatAsCurrencyInput(e.target.value))} 
-                    className="w-full bg-[var(--bg-main)] border border-[var(--border-color)] p-4 rounded-2xl outline-none focus:border-[#fa7f72] text-sm transition-all focus:scale-105 text-[var(--text-primary)]" 
-                  />
-                  <select 
-                    value={newTransCategory} 
-                    onChange={e => setNewTransCategory(e.target.value)} 
-                    className="w-full bg-[var(--bg-main)] border border-[var(--border-color)] p-4 rounded-2xl outline-none focus:border-[#fa7f72] text-sm appearance-none cursor-pointer text-[var(--text-primary)] font-medium"
-                  >
-                    {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                  </select>
+                  <input type="text" placeholder="O que você gastou?" value={newTransDesc} onChange={e => setNewTransDesc(e.target.value)} className="w-full bg-[var(--bg-main)] border border-[var(--border-color)] p-4 rounded-2xl outline-none focus:border-[#fa7f72] text-sm transition-all focus:scale-105 text-[var(--text-primary)]" />
+                  <input type="text" placeholder="R$ 0,00" value={newTransAmount} onChange={e => setNewTransAmount(formatAsCurrencyInput(e.target.value))} className="w-full bg-[var(--bg-main)] border border-[var(--border-color)] p-4 rounded-2xl outline-none focus:border-[#fa7f72] text-sm transition-all focus:scale-105 text-[var(--text-primary)]" />
+                  <select value={newTransCategory} onChange={e => setNewTransCategory(e.target.value)} className="w-full bg-[var(--bg-main)] border border-[var(--border-color)] p-4 rounded-2xl outline-none focus:border-[#fa7f72] text-sm appearance-none cursor-pointer text-[var(--text-primary)] font-medium">{CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}</select>
                   <div className="flex gap-2">
                     <button onClick={() => setNewTransType('REVENUE')} className={`flex-1 p-3 rounded-2xl font-bold uppercase text-[9px] transition-all ${newTransType === 'REVENUE' ? 'bg-[#fa7f72] text-black' : 'bg-[var(--bg-main)] text-[var(--text-secondary)] border border-[var(--border-color)]'}`}>Entrada</button>
                     <button onClick={() => setNewTransType('EXPENSE')} className={`flex-1 p-3 rounded-2xl font-bold uppercase text-[9px] transition-all ${newTransType === 'EXPENSE' ? 'bg-white/10 text-[#fa7f72] border border-[#fa7f72]/30' : 'bg-[var(--bg-main)] text-[var(--text-secondary)] border border-[var(--border-color)]'}`}>Saída</button>
                   </div>
                 </div>
-                <button 
-                  onClick={handleAddManualTransaction} 
-                  className="mt-6 w-full py-4 bg-[#fa7f72] text-black rounded-2xl font-black uppercase tracking-[0.3em] text-[10px] hover:scale-[1.02] transition-transform"
-                >
-                  Confirmar Registro
-                </button>
+                <button onClick={handleAddManualTransaction} className="mt-6 w-full py-4 bg-[#fa7f72] text-black rounded-2xl font-black uppercase tracking-[0.3em] text-[10px] hover:scale-[1.02] transition-transform">Confirmar Registro</button>
               </Card>
 
               <Card className="bg-[var(--bg-card)] border-[var(--border-color)] rounded-[2.5rem] p-8 lg:p-10 shadow-sm flex flex-col max-h-[320px] card-hover animate-fade-up stagger-2">
@@ -512,14 +538,10 @@ export const App: React.FC = () => {
                   <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[var(--text-primary)]">Fluxo Recente</h3>
                 </div>
                 <div className="flex-1 overflow-y-auto space-y-4 no-scrollbar">
-                   {transactions.length === 0 ? (
-                     <p className="text-[10px] text-[var(--text-muted)] uppercase italic py-4 font-bold">Nenhum registro ainda.</p>
-                   ) : (
+                   {transactions.length === 0 ? (<p className="text-[10px] text-[var(--text-muted)] uppercase italic py-4 font-bold">Nenhum registro ainda.</p>) : (
                      transactions.slice(0, 5).map((t, idx) => (
                        <div key={t.id} className="flex items-center justify-between gap-4 p-3 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-2xl animate-fade-up" style={{ animationDelay: `${idx * 0.1}s` }}>
-                         <div className={`p-2 rounded-lg ${t.type === 'REVENUE' ? 'bg-[#fa7f72]/10 text-[#fa7f72]' : 'bg-[var(--border-color)] text-[var(--text-muted)]'}`}>
-                           {t.type === 'REVENUE' ? <ArrowUpCircle className="w-4 h-4" /> : <ArrowDownCircle className="w-4 h-4" />}
-                         </div>
+                         <div className={`p-2 rounded-lg ${t.type === 'REVENUE' ? 'bg-[#fa7f72]/10 text-[#fa7f72]' : 'bg-[var(--border-color)] text-[var(--text-muted)]'}`}>{t.type === 'REVENUE' ? <ArrowUpCircle className="w-4 h-4" /> : <ArrowDownCircle className="w-4 h-4" />}</div>
                          <div className="flex-1 min-w-0">
                            <p className="text-[10px] font-bold text-[var(--text-primary)] uppercase truncate">{t.description}</p>
                            <p className="text-[8px] text-[var(--text-secondary)] uppercase tracking-widest font-black">{t.category}</p>
@@ -534,45 +556,241 @@ export const App: React.FC = () => {
           </div>
         )}
 
+        {activeTab === 'finances' && (
+          <div key="tab-finances" className="space-y-8 animate-fade-up">
+            <h2 className="text-3xl font-black uppercase text-[#fa7f72] tracking-tighter">Fluxo Financeiro</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="p-8 border-[#fa7f72]/20">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Entradas do Mês</p>
+                <p className="text-2xl font-black text-[#fa7f72]">R$ {monthlyStats.revenue.toLocaleString('pt-BR')}</p>
+              </Card>
+              <Card className="p-8">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Saídas do Mês</p>
+                <p className="text-2xl font-black text-white">R$ {monthlyStats.expenses.toLocaleString('pt-BR')}</p>
+              </Card>
+              <Card className="p-8">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Saldo em Conta</p>
+                <p className="text-2xl font-black text-[#fa7f72]">R$ {totalEquity.toLocaleString('pt-BR')}</p>
+              </Card>
+            </div>
+            
+            <Card className="rounded-[2.5rem]">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xs font-black uppercase tracking-[0.2em]">Histórico Completo</h3>
+              </div>
+              <div className="space-y-4 max-h-[60vh] overflow-y-auto no-scrollbar pr-2">
+                {transactions.length === 0 ? (
+                  <div className="text-center py-20 text-[var(--text-muted)] uppercase text-[10px] font-black tracking-widest">Sem transações registradas</div>
+                ) : (
+                  transactions.map(t => (
+                    <div key={t.id} className="flex items-center justify-between p-4 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-2xl group hover:border-[#fa7f72]/40 transition-all">
+                      <div className="flex items-center gap-4">
+                        <div className={`p-3 rounded-xl ${t.type === 'REVENUE' ? 'bg-[#fa7f72]/10 text-[#fa7f72]' : 'bg-neutral-800 text-neutral-400'}`}>
+                          {t.type === 'REVENUE' ? <ArrowUpCircle className="w-5 h-5" /> : <ArrowDownCircle className="w-5 h-5" />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-black uppercase">{t.description}</p>
+                          <p className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest">{t.category} • {new Date(t.date).toLocaleDateString('pt-BR')}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-6">
+                        <p className={`text-sm font-black ${t.type === 'REVENUE' ? 'text-[#fa7f72]' : 'text-white'}`}>
+                          {t.type === 'REVENUE' ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR')}
+                        </p>
+                        <button onClick={() => handleDeleteTransaction(t.id)} className="p-2 text-neutral-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {activeTab === 'tasks' && (
+          <div key="tab-tasks" className="space-y-8 animate-fade-up">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+              <div>
+                <h2 className="text-3xl font-black uppercase text-[#fa7f72] tracking-tighter">Central de Operações</h2>
+                <div className="flex items-center gap-3 mt-2">
+                  <div className={`px-3 py-1 rounded-full bg-[#fa7f72]/10 ${RANK_COLORS[stats.rank]} text-[9px] font-black uppercase tracking-widest border border-[#fa7f72]/20`}>
+                    Rank: {stats.rank}
+                  </div>
+                  <div className="text-[9px] font-black uppercase tracking-widest text-[var(--text-muted)]">Nível {stats.level} • {stats.xp} XP</div>
+                </div>
+              </div>
+              <div className="w-full md:w-64 bg-[var(--bg-card)] p-2 rounded-2xl border border-[var(--border-color)]">
+                <div className="h-2 w-full bg-black rounded-full overflow-hidden">
+                  <div className="h-full bg-[#fa7f72] transition-all duration-1000" style={{ width: `${(stats.xp % 1000) / 10}%` }} />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <Card className="lg:col-span-2 rounded-[2.5rem]">
+                <div className="flex gap-3 mb-8">
+                  <input 
+                    type="text" 
+                    placeholder="Nova tarefa de alta performance..." 
+                    value={newTaskTitle} 
+                    onChange={e => setNewTaskTitle(e.target.value)} 
+                    onKeyDown={e => e.key === 'Enter' && handleAddTask()}
+                    className="flex-1 bg-[var(--bg-main)] border border-[var(--border-color)] p-4 rounded-2xl outline-none focus:border-[#fa7f72] text-sm text-[var(--text-primary)] transition-all" 
+                  />
+                  <select 
+                    value={newTaskPriority} 
+                    onChange={e => setNewTaskPriority(e.target.value as Priority)}
+                    className="bg-[var(--bg-main)] border border-[var(--border-color)] px-4 rounded-2xl text-[9px] font-black uppercase tracking-widest outline-none cursor-pointer"
+                  >
+                    <option value={Priority.HIGH}>Alta</option>
+                    <option value={Priority.MEDIUM}>Média</option>
+                    <option value={Priority.LOW}>Baixa</option>
+                  </select>
+                  <button onClick={handleAddTask} className="p-4 bg-[#fa7f72] text-black rounded-2xl hover:scale-105 transition-transform"><Plus className="w-6 h-6" /></button>
+                </div>
+
+                <div className="space-y-3">
+                  {tasks.length === 0 ? (
+                    <div className="text-center py-20 border border-dashed border-[var(--border-color)] rounded-3xl">
+                       <CheckSquare className="w-12 h-12 text-[var(--border-color)] mx-auto mb-4" />
+                       <p className="text-[10px] text-[var(--text-muted)] uppercase font-black tracking-widest">Nenhuma tarefa ativa</p>
+                    </div>
+                  ) : (
+                    tasks.map(task => (
+                      <div key={task.id} className={`flex items-center justify-between p-5 rounded-2xl border transition-all ${task.completed ? 'bg-black/40 border-transparent opacity-50' : 'bg-[var(--bg-main)] border-[var(--border-color)]'}`}>
+                        <div className="flex items-center gap-4">
+                          <button onClick={() => toggleTask(task.id)} className={`w-7 h-7 rounded-lg border-2 flex items-center justify-center transition-all ${task.completed ? 'bg-[#fa7f72] border-[#fa7f72] text-black' : 'border-[#fa7f72]/40 hover:border-[#fa7f72]'}`}>
+                            {task.completed && <Check className="w-4 h-4" />}
+                          </button>
+                          <div>
+                            <span className={`text-sm font-black uppercase ${task.completed ? 'line-through' : ''}`}>
+                              {task.emoji} {task.title}
+                            </span>
+                            <div className="flex gap-2 mt-1">
+                              <span className={`text-[8px] font-black uppercase tracking-tighter ${task.priority === Priority.HIGH ? 'text-red-500' : task.priority === Priority.MEDIUM ? 'text-orange-400' : 'text-blue-400'}`}>
+                                Prioridade {task.priority}
+                              </span>
+                              <span className="text-[8px] font-black text-[#fa7f72] uppercase">+{task.xpValue} XP</span>
+                            </div>
+                          </div>
+                        </div>
+                        <button onClick={() => deleteTask(task.id)} className="p-2 text-neutral-600 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </Card>
+
+              <Card className="rounded-[2.5rem] bg-black border-[#fa7f72]/10">
+                <div className="flex items-center gap-3 mb-8">
+                  <Trophy className="w-5 h-5 text-[#fa7f72]" />
+                  <h3 className="text-xs font-black uppercase tracking-[0.2em]">Conquistas</h3>
+                </div>
+                <div className="space-y-6">
+                  {[
+                    { label: 'Primeiro Comando', desc: 'Realize sua primeira transação via IA.', done: transactions.length > 0 },
+                    { label: 'Foco Total', desc: 'Conclua 5 tarefas em um único dia.', done: tasks.filter(t => t.completed).length >= 5 },
+                    { label: 'Mestre da Reserva', desc: 'Mantenha saldo positivo acima de R$ 2k.', done: totalEquity > 2000 }
+                  ].map((conq, idx) => (
+                    <div key={idx} className={`flex gap-4 p-4 rounded-2xl border transition-all ${conq.done ? 'border-[#fa7f72]/40 bg-[#fa7f72]/5' : 'border-neutral-800 opacity-40'}`}>
+                       <div className={`p-3 rounded-xl ${conq.done ? 'bg-[#fa7f72] text-black' : 'bg-neutral-800 text-neutral-500'}`}><Sparkles className="w-4 h-4" /></div>
+                       <div>
+                         <p className="text-[10px] font-black uppercase">{conq.label}</p>
+                         <p className="text-[8px] font-bold text-[var(--text-muted)] uppercase tracking-wider mt-1">{conq.desc}</p>
+                       </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'goals' && (
+          <div key="tab-goals" className="space-y-8 animate-fade-up">
+            <h2 className="text-3xl font-black uppercase text-[#fa7f72] tracking-tighter">Visão de Futuro</h2>
+            
+            <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+              <Card className="xl:col-span-1 rounded-[2.5rem]">
+                <h3 className="text-xs font-black uppercase tracking-[0.2em] mb-6">Nova Meta</h3>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-[9px] font-black uppercase text-[var(--text-muted)] mb-2">O que você quer conquistar?</p>
+                    <input type="text" placeholder="Ex: Viagem, Carro, Reserva..." value={newGoalTitle} onChange={e => setNewGoalTitle(e.target.value)} className="w-full bg-[var(--bg-main)] border border-[var(--border-color)] p-4 rounded-2xl outline-none text-sm font-bold uppercase" />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-black uppercase text-[var(--text-muted)] mb-2">Valor Alvo</p>
+                    <input type="text" placeholder="R$ 0,00" value={newGoalTarget} onChange={e => setNewGoalTarget(formatAsCurrencyInput(e.target.value))} className="w-full bg-[var(--bg-main)] border border-[var(--border-color)] p-4 rounded-2xl outline-none text-sm font-bold tabular-nums" />
+                  </div>
+                  <button onClick={handleAddGoal} className="w-full py-4 bg-[#fa7f72] text-black rounded-2xl font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-transform">Adicionar Meta</button>
+                </div>
+              </Card>
+
+              <div className="xl:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-6">
+                {goals.length === 0 ? (
+                  <div className="md:col-span-2 py-24 text-center border border-dashed border-[var(--border-color)] rounded-[3rem]">
+                    <Target className="w-16 h-16 text-[var(--border-color)] mx-auto mb-6" />
+                    <p className="text-[10px] text-[var(--text-muted)] uppercase font-black tracking-widest">Sem metas planejadas</p>
+                  </div>
+                ) : (
+                  goals.map(goal => {
+                    const progress = Math.min((goal.current / goal.target) * 100, 100);
+                    return (
+                      <Card key={goal.id} className="p-8 rounded-[2.5rem] group card-hover">
+                        <div className="flex justify-between items-start mb-6">
+                          <div className="flex items-center gap-3">
+                            <div className="p-3 bg-[#fa7f72]/10 rounded-xl text-xl">{goal.emoji}</div>
+                            <div>
+                              <p className="text-sm font-black uppercase">{goal.title}</p>
+                              <p className="text-[9px] font-bold text-[var(--text-muted)] uppercase mt-1">Faltam R$ {(goal.target - goal.current).toLocaleString('pt-BR')}</p>
+                            </div>
+                          </div>
+                          <button onClick={() => deleteGoal(goal.id)} className="text-neutral-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"><X className="w-4 h-4" /></button>
+                        </div>
+                        <div className="space-y-3">
+                          <div className="flex justify-between text-[10px] font-black uppercase tabular-nums">
+                             <span className="text-[#fa7f72]">R$ {goal.current.toLocaleString('pt-BR')}</span>
+                             <span className="text-neutral-500">R$ {goal.target.toLocaleString('pt-BR')}</span>
+                          </div>
+                          <div className="h-3 w-full bg-[var(--bg-main)] rounded-full overflow-hidden p-0.5 border border-[var(--border-color)]">
+                             <div className="h-full bg-[#fa7f72] rounded-full transition-all duration-1000" style={{ width: `${progress}%` }} />
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {activeTab === 'settings' && (
           <div className="space-y-8 lg:space-y-12 animate-fade-up max-w-4xl mx-auto">
             <h2 className="text-3xl font-black uppercase text-[#fa7f72] tracking-tighter">Ajustes do Sistema</h2>
-            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Card de Informação */}
               <Card className="p-10 bg-[var(--bg-card)] border-[var(--border-color)] rounded-[3rem] flex flex-col items-center text-center shadow-xl">
                 <DonteLogo className="w-24 h-24 mb-6" theme={theme} />
                 <h3 className="text-2xl font-black text-[var(--text-primary)] mb-2">FANTE IA</h3>
                 <p className="text-[10px] text-[var(--text-muted)] uppercase font-black tracking-[0.3em] mb-8">Ecosystem v2.6.2 Final</p>
                 <div className="w-full h-px bg-[var(--border-color)] mb-8" />
-                <p className="text-[11px] text-[var(--text-secondary)] font-bold leading-relaxed uppercase tracking-wider">
-                  Controle financeiro de alta precisão.<br/>Safari IA ativada e pronta para comando.
-                </p>
+                <p className="text-[11px] text-[var(--text-secondary)] font-bold leading-relaxed uppercase tracking-wider">Controle financeiro de alta precisão.<br/>Safari IA ativada e pronta para comando.</p>
               </Card>
-
-              {/* Card de Personalização (Tema) */}
               <Card className="p-10 bg-[var(--bg-card)] border-[var(--border-color)] rounded-[3rem] shadow-xl flex flex-col gap-8">
                 <div className="flex items-center gap-4 mb-2">
                   <Palette className="w-6 h-6 text-[#fa7f72]" />
                   <h3 className="text-sm font-black text-[var(--text-primary)] uppercase tracking-[0.2em]">Personalização</h3>
                 </div>
-                
                 <div className="space-y-6">
                   <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Interface Visual</p>
                   <div className="grid grid-cols-2 gap-4">
-                    <button 
-                      onClick={() => setTheme('light')}
-                      className={`flex flex-col items-center gap-3 p-6 rounded-3xl border transition-all ${theme === 'light' ? 'bg-[#fa7f72] border-[#fa7f72] text-black shadow-lg scale-105' : 'bg-[var(--bg-main)] border-[var(--border-color)] text-[var(--text-secondary)] opacity-60 hover:opacity-100'}`}
-                    >
-                      <Sun className="w-6 h-6" />
-                      <span className="text-[10px] font-black uppercase tracking-widest">Modo Claro</span>
+                    <button onClick={() => setTheme('light')} className={`flex flex-col items-center gap-3 p-6 rounded-3xl border transition-all ${theme === 'light' ? 'bg-[#fa7f72] border-[#fa7f72] text-black shadow-lg scale-105' : 'bg-[var(--bg-main)] border-[var(--border-color)] text-[var(--text-secondary)] opacity-60 hover:opacity-100'}`}>
+                      <Sun className="w-6 h-6" /><span className="text-[10px] font-black uppercase tracking-widest">Modo Claro</span>
                     </button>
-                    <button 
-                      onClick={() => setTheme('dark')}
-                      className={`flex flex-col items-center gap-3 p-6 rounded-3xl border transition-all ${theme === 'dark' ? 'bg-[#fa7f72] border-[#fa7f72] text-black shadow-lg scale-105' : 'bg-[var(--bg-main)] border-[var(--border-color)] text-[var(--text-secondary)] opacity-60 hover:opacity-100'}`}
-                    >
-                      <Moon className="w-6 h-6" />
-                      <span className="text-[10px] font-black uppercase tracking-widest">Modo Escuro</span>
+                    <button onClick={() => setTheme('dark')} className={`flex flex-col items-center gap-3 p-6 rounded-3xl border transition-all ${theme === 'dark' ? 'bg-[#fa7f72] border-[#fa7f72] text-black shadow-lg scale-105' : 'bg-[var(--bg-main)] border-[var(--border-color)] text-[var(--text-secondary)] opacity-60 hover:opacity-100'}`}>
+                      <Moon className="w-6 h-6" /><span className="text-[10px] font-black uppercase tracking-widest">Modo Escuro</span>
                     </button>
                   </div>
                 </div>
@@ -587,12 +805,7 @@ export const App: React.FC = () => {
           <div className="p-6 lg:p-10 border-b border-[var(--border-color)] flex justify-between items-center bg-[var(--bg-card)]/95 backdrop-blur-xl">
             <div className="flex items-center gap-4">
               <div className="w-10 lg:w-12 h-10 lg:h-12 rounded-[1.2rem] border-2 border-[#fa7f72]/30 overflow-hidden bg-[var(--bg-main)] shadow-sm">
-                <img 
-                  src={SAFARI_AVATAR} 
-                  alt="Safari IA" 
-                  className="w-full h-full object-cover" 
-                  style={{ filter: theme === 'light' ? 'brightness(0)' : 'none' }}
-                />
+                <img src={SAFARI_AVATAR} alt="Safari IA" className="w-full h-full object-cover" style={{ filter: theme === 'light' ? 'brightness(0)' : 'none' }} />
               </div>
               <div>
                 <span className="uppercase text-xs lg:text-[14px] font-bold text-[#fa7f72] tracking-[0.3em] block">SAFARI IA</span>
@@ -609,12 +822,7 @@ export const App: React.FC = () => {
               <div key={i} className={`flex gap-4 ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'} animate-scale-in`}>
                 {m.role === 'ai' && (
                   <div className="w-8 h-8 rounded-lg border border-[#fa7f72]/20 overflow-hidden shrink-0 mt-1 bg-[var(--bg-main)]">
-                    <img 
-                      src={SAFARI_AVATAR} 
-                      alt="Safari IA" 
-                      className="w-full h-full object-cover" 
-                      style={{ filter: theme === 'light' ? 'brightness(0)' : 'none' }}
-                    />
+                    <img src={SAFARI_AVATAR} alt="Safari IA" className="w-full h-full object-cover" style={{ filter: theme === 'light' ? 'brightness(0)' : 'none' }} />
                   </div>
                 )}
                 <div className={`max-w-[85%] p-4 lg:p-6 rounded-[1.5rem] lg:rounded-[2rem] text-xs lg:text-sm font-bold uppercase shadow-sm ${m.role === 'user' ? 'bg-[#fa7f72] text-black' : 'bg-[var(--bg-card)] text-[var(--text-primary)] border border-[var(--border-color)]'}`}>
@@ -638,7 +846,7 @@ export const App: React.FC = () => {
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-24 bg-[var(--bg-card)]/95 backdrop-blur-3xl border-t border-[var(--border-color)] flex items-center justify-around px-2 pb-6 z-[400] shadow-2xl">
         {[
           { id: 'dashboard', icon: LayoutDashboard, label: 'Painel' },
-          { id: 'finances', icon: Wallet, label: 'Contas' },
+          { id: 'finances', icon: Wallet, label: 'Financeiro' },
         ].map(btn => (
           <button key={btn.id} onClick={() => setActiveTab(btn.id)} className={`flex flex-col items-center gap-1.5 p-2 transition-all ${activeTab === btn.id ? 'text-[#fa7f72] scale-110' : 'text-neutral-500'}`}>
             <btn.icon className="w-5 h-5" />
